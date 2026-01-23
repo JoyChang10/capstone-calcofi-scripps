@@ -1,0 +1,96 @@
+---
+title: "data_ingestion"
+author: "Shenyi Jiang"
+date: "2026-01-23"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(dplyr)
+library(janitor)
+library(tidyr)
+library(stringr)
+```
+
+```{r}
+# import data
+data_raw <- read_csv(
+  "preliminarydata.csv",
+  show_col_types = FALSE
+)
+
+names(data_raw)
+```
+
+```{r}
+# clean data
+data_raw <- data_raw %>% clean_names()
+names(data_raw)[1:15]
+
+data_raw <- data_raw %>% select(-x1)
+```
+
+```{r}
+# wide table to long table
+meta_cols <- c(
+  "unique_code", "s_c", "s_sc", "s_l", "s_s", 
+  "longitude", "latitude", "year", "season"
+)
+
+data_long <- data_raw %>% pivot_longer(
+  cols = -all_of(meta_cols),
+  names_to = "taxon",
+  values_to = "abundance"
+) %>%
+  filter(!is.na(abundance), abundance > 0) %>%
+  mutate(
+    year = as.integer(year),
+    abundance = as.numeric(abundance),
+    taxon = str_replace(taxon, "1$", "")
+  ) 
+
+glimpse(data_long)
+count(data_long, taxon, sort = TRUE) %>% head(10)
+range(data_long$year, na.rm = TRUE)
+
+```
+
+```{r}
+# total abundance + taxa richness
+annual_state <- data_long %>%
+  group_by(year) %>%
+  summarize(
+    total_abundance = sum(abundance, na.rm = TRUE),
+    taxa_richness = n_distinct(taxon),
+    .groups = "drop"
+  )
+head(annual_state)
+summary(annual_state)
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+
+annual_long <- annual_state %>%
+  pivot_longer(
+    cols = c(total_abundance, taxa_richness),
+    names_to = "metric",
+    values_to = "value"
+  )
+
+ggplot(annual_long, aes(x=year, y=value)) +
+  geom_line(linewidth = 1) + 
+  facet_wrap(~ metric, scales = "free_y", ncol = 1) +
+  theme_minimal() + 
+  labs(
+    title = "Annual Ecological State of the California Current (Ichthyoplankton)",
+    x = "year", y = "value"
+  )
+```
+
