@@ -10,7 +10,7 @@ source("R/taxon_pivot.R")
 
 run_ingest_pipeline <- function(
     csv_path,
-    lookup_path = "data/taxonomy_lookup_fcc.csv",
+    lookup_path = "data/taxonomy_lookup.csv",
     db_path = "data/prototype.duckdb",
     drop_zero = FALSE,
     overwrite_table = TRUE
