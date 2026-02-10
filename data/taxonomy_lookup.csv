@@ -1,71 +1,102 @@
-taxon_name,worms_id
-Argentina sialis,272897
-Aristostomias scintillans,275007
-Bathophilus flemingi,275046
-Bathylagoides wesethi,712444
-Bathylagus pacificus,272919
-Brosmophycis marginata,280000
-Ceratoscopelus townsendi,272656
-Chauliodus macouni,275055
-Chromis punctipinnis,273751
-Cololabis saira,280366
-Diogenichthys atlanticus,126599
-Diogenichthys laternatus,272701
-Electrona risso,126600
-Embassichthys bathybius,280641
-Engraulis mordax,272286
-Girella nigricans,280865
-Glyptocephalus zachirus,274287
-Hemilepidotus spinosus,279413
-Hippoglossina stomata,275827
-Hypsypops rubicundus,281130
-Icichthys lockingtoni,279354
-Idiacanthus antrostomus,275151
-Lampadena urophaos,126609
-Leuroglossus stilbius,313514
-Lipolagus ochotensis,281374
-Loweina rara,126625
-Lyopsetta exilis,281452
-Medialuna californiensis,281541
-Merluccius productus,272458
-Microstoma,NA
-Microstomus pacificus,274294
-Nansenia candida,272926
-Nansenia crassa,272927
-Notolychnus valdiviae,126629
-Notoscopelus resplendens,158916
-Ophiodon elongatus,240745
-Oxylebius pictus,240743
-Paralichthys californicus,275809
-Parophrys vetulus,254393
-Peprilus simillimus,276563
-Pleuronichthys coenosus,282290
-Pleuronichthys decurrens,282292
-Pleuronichthys verticalis,282295
-Protomyctophum crockeri,272731
-Psettichthys melanostictus,282396
-Pseudobathylagus milleri,282406
-Sardinops sagax,217452
-Scomber japonicus,127022
-Scorpaenichthys marmoratus,NA
-Sebastes aurora,274774
-Sebastes diploproa,274787
-Sebastes goodei,274798
-Sebastes jordani,274806
-Sebastes levis,274812
-Sebastes paucispinis,274833
-Seriola lalandi,218436
-Sphyraena argentea,273978
-Stenobrachius leucopsarus,254363
-Stomias atriventer,275178
-Symbolophorus californiensis,272733
-Symbolophorus evermanni,217718
-Symphurus atricaudus,274234
-Tactostoma macropus,282922
-Tarletonbeania crenularis,282927
-Tetragonurus cuvieri,127080
-Trachurus symmetricus,273305
-Triphoturus mexicanus,278566
-Zoarcoidei,151739
-Leptostomias,126212
-Teleostei,293496
+taxon_raw,taxon_name,worms_id
+Argentina.sialis,Argentina sialis,272897
+Aristostomias.scintillans,Aristostomias scintillans,275007
+Bathophilus.flemingi,Bathophilus flemingi,275046
+Bathylagoides.wesethi,Bathylagoides wesethi,712444
+Bathylagus.pacificus,Bathylagus pacificus,272919
+Brosmophycis.marginata,Brosmophycis marginata,280000
+Ceratoscopelus.townsendi,Ceratoscopelus townsendi,272656
+Chauliodus.macouni,Chauliodus macouni,275055
+Chromis.punctipinnis,Chromis punctipinnis,273751
+Cololabis.saira,Cololabis saira,280366
+Diogenichthys.atlanticus,Diogenichthys atlanticus,126599
+Diogenichthys.laternatus,Diogenichthys laternatus,272701
+Electrona.risso,Electrona risso,126600
+Embassichthys.bathybius,Embassichthys bathybius,280641
+Engraulis.mordax,Engraulis mordax,272286
+Girella.nigricans,Girella nigricans,280865
+Glyptocephalus.zachirus,Glyptocephalus zachirus,274287
+Hemilepidotus.spinosus,Hemilepidotus spinosus,279413
+Hippoglossina.stomata,Hippoglossina stomata,275827
+Hypsypops.rubicundus,Hypsypops rubicundus,281130
+Icichthys.lockingtoni,Icichthys lockingtoni,279354
+Idiacanthus.antrostomus,Idiacanthus antrostomus,275151
+Lampadena.urophaos,Lampadena urophaos,126609
+Leuroglossus.stilbius,Leuroglossus stilbius,313514
+Lipolagus.ochotensis,Lipolagus ochotensis,281374
+Loweina.rara,Loweina rara,126625
+Lyopsetta.exilis,Lyopsetta exilis,281452
+Medialuna.californiensis,Medialuna californiensis,281541
+Merluccius.productus,Merluccius productus,272458
+Microstoma,Microstoma,NA
+Microstomus.pacificus,Microstomus pacificus,274294
+Nansenia.candida,Nansenia candida,272926
+Nansenia.crassa,Nansenia crassa,272927
+Notolychnus.valdiviae,Notolychnus valdiviae,126629
+Notoscopelus.resplendens,Notoscopelus resplendens,158916
+Ophiodon.elongatus,Ophiodon elongatus,240745
+Oxylebius.pictus,Oxylebius pictus,240743
+Paralichthys.californicus,Paralichthys californicus,275809
+Parophrys.vetulus,Parophrys vetulus,254393
+Peprilus.simillimus,Peprilus simillimus,276563
+Pleuronichthys.coenosus,Pleuronichthys coenosus,282290
+Pleuronichthys.decurrens,Pleuronichthys decurrens,282292
+Pleuronichthys.verticalis,Pleuronichthys verticalis,282295
+Protomyctophum.crockeri,Protomyctophum crockeri,272731
+Psettichthys.melanostictus,Psettichthys melanostictus,282396
+Pseudobathylagus.milleri,Pseudobathylagus milleri,282406
+Sardinops.sagax,Sardinops sagax,217452
+Scomber.japonicus,Scomber japonicus,127022
+Scorpaenichthys.marmoratus,Scorpaenichthys marmoratus,NA
+Sebastes.aurora,Sebastes aurora,274774
+Sebastes.diploproa,Sebastes diploproa,274787
+Sebastes.goodei,Sebastes goodei,274798
+Sebastes.jordani,Sebastes jordani,274806
+Sebastes.levis,Sebastes levis,274812
+Sebastes.paucispinis,Sebastes paucispinis,274833
+Seriola.lalandi,Seriola lalandi,218436
+Sphyraena.argentea,Sphyraena argentea,273978
+Stenobrachius.leucopsarus,Stenobrachius leucopsarus,254363
+Stomias.atriventer,Stomias atriventer,275178
+Symbolophorus.californiensis,Symbolophorus californiensis,272733
+Symbolophorus.evermanni,Symbolophorus evermanni,217718
+Symphurus.atricaudus,Symphurus atricaudus,274234
+Tactostoma.macropus,Tactostoma macropus,282922
+Tarletonbeania.crenularis,Tarletonbeania crenularis,282927
+Tetragonurus.cuvieri,Tetragonurus cuvieri,127080
+Trachurus.symmetricus,Trachurus symmetricus,273305
+Triphoturus.mexicanus,Triphoturus mexicanus,278566
+Zoarcoidei,Zoarcoidei,151739
+Anguilliformes1,Anguilliformes,10295
+Gonostomatidae1,Gonostomatidae,NA
+Sternoptychidae1,Sternoptychidae,125603
+Vinciguerria1,Vinciguerria,126194
+Scopelarchidae1,Scopelarchidae,125448
+Paralepididae1,Paralepididae,125447
+Myctophum1,Myctophum,125829
+Diaphus1,Diaphus,125819
+Nannobrachium1,Nannobrachium,158908
+Hygophum1,Hygophum,125823
+Macrouridae1,Macrouridae,125471
+Ophidiiformes1,Ophidiiformes,10314
+Lampridiformes1,Lampridiformes,NA
+Melamphaidae1,Melamphaidae,125599
+Syngnathus1,Syngnathus,126227
+Sebastes1,Sebastes,126175
+Scorpaena1,Scorpaena,126171
+Sebastolobus1,Sebastolobus,270859
+Cottidae1,Cottidae,125589
+Agonidae1,Agonidae,125588
+Cyclopteridae1,Cyclopteridae,125590
+Paralabrax1,Paralabrax,270221
+Sciaenidae1,Sciaenidae,125558
+Labridae1,Labridae,125541
+Chiasmodon1,Chiasmodon,125956
+Clinidae1,Clinidae,125530
+Hypsoblennius1,Hypsoblennius,159603
+Gobiidae1,Gobiidae,125537
+Citharichthys1,Citharichthys,158786
+Pleuronichthys1,Pleuronichthys,270459
+Gempylidae1,Gempylidae,125536
+Leptostomias,Leptostomias,126212
+Teleostei,Teleostei,293496
