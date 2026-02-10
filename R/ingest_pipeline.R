@@ -1,117 +1,128 @@
-library(dplyr)
-library(tidyr)
 library(readr)
+library(dplyr)
 library(janitor)
 library(DBI)
 library(duckdb)
-library(here)
-library(stringr)
 
-# 1. Read raw wide dataset
-raw_data <- read_csv(
-  here("data/ichthyoplankton_updatedthru2304_032824.csv"),
-  show_col_types = FALSE
-) %>%
-  janitor::clean_names()
+# Source the pivot logic (must be in the same directory or provide full path)
+source("R/taxon_pivot.R")
 
-# 2. Identify metadata columns
-meta_cols <- c(
-  "unique_code",
-  "s_c", "s_sc",
-  "s_l", "s_s",
-  "latitude", "longitude",
-  "year", "season"
-)
 
-# 3. Pivot species columns into long format
-long_data <- raw_data %>%
-  pivot_longer(
-    cols = -all_of(meta_cols),
-    names_to = "taxon",
-    values_to = "abundance"
-  ) %>%
-  filter(!is.na(abundance)) %>%
-  mutate(
-    abundance = as.numeric(abundance),
-    taxon = str_replace_all(taxon, "\\.", " "),
-    taxon = str_trim(taxon)
-  )
+run_ingest_pipeline <- function(
+    csv_path,
+    lookup_path = "data/taxonomy_lookup_fcc.csv",
+    db_path = "data/prototype.duckdb",
+    drop_zero = FALSE,
+    overwrite_table = TRUE
+) {
+  # 1) Pivot wide -> tidy long
+  df_long <- ingest_and_pivot_taxa(csv_path = csv_path, drop_zero = drop_zero)
+  
+  # 2) Read lookup table (taxon_name -> worms_id)
+  lookup <- read_csv(lookup_path, show_col_types = FALSE) %>%
+    janitor::clean_names()
 
-# 4. Enforce PRIMARY KEY constraint (unique_code)
-# Collapse multiple taxa per unique_code into a single row
-# by summing abundance and keeping a representative taxon
-collapsed <- long_data %>%
-  group_by(unique_code) %>%
-  summarise(
-    s_c = first(s_c),
-    s_sc = first(s_sc),
-    s_l = first(s_l),
-    s_s = first(s_s),
-    latitude = first(latitude),
-    longitude = first(longitude),
-    year = first(year),
-    season = first(season),
+  
+  # 3) Prepare join keys (make join robust to case/whitespace)
+  df_enriched <- df_long %>%
+    left_join(
+      lookup,
+      by = c("scientific_name" = "taxon_raw")
+    )
+  
+  # Optional: warn if any taxa failed to map to worms_id
+  n_unmatched <- sum(is.na(df_enriched$worms_id))
+  if (n_unmatched > 0) {
+    unmatched_taxa <- df_enriched %>%
+      filter(is.na(worms_id)) %>%
+      distinct(taxon) %>%
+      arrange(taxon)
     
-    taxon = paste(unique(taxon), collapse = "; "),
-    abundance = sum(abundance, na.rm = TRUE),
-    .groups = "drop"
-  )
+    warning(
+      sprintf(
+        "There are %d rows with missing worms_id (unmatched taxa). Example taxa: %s",
+        n_unmatched,
+        paste(head(unmatched_taxa$taxon, 10), collapse = ", ")
+      )
+    )
+  }
+  
+  # 4) Connect to DuckDB
+  con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
+  on.exit({
+    dbDisconnect(con, shutdown = TRUE)
+  }, add = TRUE)
+  
+  # 5) Create table (overwrite if requested)
+  if (overwrite_table) {
+    dbExecute(con, "DROP TABLE IF EXISTS ichthyoplankton_observations;")
+  }
+  
+  # IMPORTANT NOTE:
+  # In tidy-long format, unique_code repeats across taxa, so primary key must be (unique_code, taxon).
+  dbExecute(con, "
+    CREATE TABLE IF NOT EXISTS ichthyoplankton_observations (
+      unique_code VARCHAR,
+      s_c         VARCHAR,
+      s_sc        VARCHAR,
+      s_l         DOUBLE,
+      s_s         DOUBLE,
+      latitude    DOUBLE,
+      longitude   DOUBLE,
+      year        INTEGER,
+      season      VARCHAR,
+      taxon       VARCHAR,
+      abundance   DOUBLE,
+      worms_id    INTEGER,
+      PRIMARY KEY (unique_code, taxon)
+    );
+  ")
+  
+  # 6) Reorder/convert columns to match table schema exactly
+  df_to_write <- df_enriched %>%
+    transmute(
+      unique_code = as.character(unique_code),
+      s_c         = as.character(s_c),
+      s_sc        = as.character(s_sc),
+      s_l         = as.numeric(s_l),
+      s_s         = as.numeric(s_s),
+      latitude    = as.numeric(latitude),
+      longitude   = as.numeric(longitude),
+      year        = as.integer(year),
+      season      = as.character(season),
+      taxon       = as.character(taxon),
+      abundance   = as.numeric(abundance),
+      worms_id    = as.integer(worms_id)
+    )
+  
+  dup_rows <- df_to_write %>%
+    add_count(unique_code, taxon, name = "n_key") %>%
+    filter(n_key > 1) %>%
+    arrange(unique_code, taxon)
+  
+  if (nrow(dup_rows) > 0) {
+    message("⚠️ Found duplicate PRIMARY KEYs inside df_to_write. These rows will be handled before insert:")
+    print(
+      dup_rows %>%
+        select(unique_code, taxon, abundance, worms_id, n_key) %>%
+        head(50)
+    )
+  }
+  
+  df_to_insert <- df_to_write %>%
+    distinct(unique_code, taxon, .keep_all = TRUE)
+  
+  DBI::dbAppendTable(con, "ichthyoplankton_observations", df_to_insert)
+  
+  message(sprintf(
+    "Inserted %d rows after dedup (original %d rows; removed/merged %d duplicate rows).",
+    nrow(df_to_insert),
+    nrow(df_to_write),
+    nrow(df_to_write) - nrow(df_to_insert)
+  ))
 
-# 5. Join WoRMS taxonomy lookup
-taxonomy_lookup <- read_csv(
-  here("data/taxonomy_lookup.csv"),
-  show_col_types = FALSE
-)
+  }
 
-final_data <- collapsed %>%
-  left_join(
-    taxonomy_lookup,
-    by = c("taxon" = "taxon_name")
-  )
+run_ingest_pipeline(csv_path = "data/ichthyoplankton_updatedthru2304_032824.csv", drop_zero = TRUE)
 
-# ---- 6. Write to DuckDB ----
-con <- dbConnect(
-  duckdb::duckdb(),
-  dbdir = here("data/prototype.duckdb"),
-  read_only = FALSE
-)
 
-# Find the real table name in this DB 
-tables <- DBI::dbGetQuery(con, "SHOW TABLES;")$name
-
-# Try common candidates: unqualified and schema-qualified
-candidates <- c("ichthyoplankton_observations", "calcofi.ichthyoplankton_observations")
-
-# Direct match
-tbl <- intersect(candidates, tables)
-tbl <- if (length(tbl) > 0) tbl[1] else NA_character_
-
-if (is.na(tbl)) {
-  tables_base <- sub("^.*\\.", "", tables)
-  cand_base <- sub("^.*\\.", "", candidates)
-  idx <- match(cand_base, tables_base)
-  if (any(!is.na(idx))) tbl <- tables[ idx[which(!is.na(idx))[1]] ]
-}
-
-if (is.na(tbl)) {
-  DBI::dbDisconnect(con, shutdown = TRUE)
-  stop(
-    "Target table not found. Tried: ",
-    paste(candidates, collapse = ", "),
-    "\nTables in this DB: ",
-    paste(tables, collapse = ", "),
-    "\nFix: run schema.sql against data/prototype.duckdb first."
-  )
-}
-
-# Now delete + write using the discovered table name
-DBI::dbExecute(con, paste0("DELETE FROM ", tbl, ";"))
-
-DBI::dbWriteTable(
-  con,
-  tbl,
-  final_data,
-  append = TRUE
-)
-
-DBI::dbDisconnect(con, shutdown = TRUE)
