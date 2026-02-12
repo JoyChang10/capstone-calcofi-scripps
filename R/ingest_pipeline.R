@@ -12,9 +12,8 @@ run_ingest_pipeline <- function(
     csv_path,
     lookup_path = "data/taxonomy_lookup.csv",
     db_path = "data/prototype.duckdb",
-    drop_zero = FALSE,
-    overwrite_table = TRUE
-) {
+    drop_zero = FALSE
+    ) {
   # 1) Pivot wide -> tidy long
   df_long <- ingest_and_pivot_taxa(csv_path = csv_path, drop_zero = drop_zero)
   
@@ -53,32 +52,7 @@ run_ingest_pipeline <- function(
     dbDisconnect(con, shutdown = TRUE)
   }, add = TRUE)
   
-  # 5) Create table (overwrite if requested)
-  if (overwrite_table) {
-    dbExecute(con, "DROP TABLE IF EXISTS ichthyoplankton_observations;")
-  }
-  
-  # IMPORTANT NOTE:
-  # In tidy-long format, unique_code repeats across taxa, so primary key must be (unique_code, taxon).
-  dbExecute(con, "
-    CREATE TABLE IF NOT EXISTS ichthyoplankton_observations (
-      unique_code VARCHAR,
-      s_c         VARCHAR,
-      s_sc        VARCHAR,
-      s_l         DOUBLE,
-      s_s         DOUBLE,
-      latitude    DOUBLE,
-      longitude   DOUBLE,
-      year        INTEGER,
-      season      VARCHAR,
-      taxon       VARCHAR,
-      abundance   DOUBLE,
-      worms_id    INTEGER,
-      PRIMARY KEY (unique_code, taxon)
-    );
-  ")
-  
-  # 6) Reorder/convert columns to match table schema exactly
+  # 5) Reorder/convert columns to match table schema exactly
   df_to_write <- df_enriched %>%
     transmute(
       unique_code = as.character(unique_code),
@@ -124,5 +98,3 @@ run_ingest_pipeline <- function(
   }
 
 run_ingest_pipeline(csv_path = "data/ichthyoplankton_updatedthru2304_032824.csv", drop_zero = TRUE)
-
-

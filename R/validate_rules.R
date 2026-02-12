@@ -7,7 +7,7 @@ validate_ichthy <- function(df) {
   required <- c("unique_code", "latitude", "longitude", "year", "season", "abundance", "taxon")
   missing <- setdiff(required, names(df))
   if (length(missing) > 0) {
-    stop("❌ Missing required columns: ", paste(missing, collapse = ", "))
+    stop("Error: Duplicated (unique_code + taxon) detected. Example row: ", paste(missing, collapse = ", "))
   }
   
   # ---- 2) Non-null checks ----
@@ -29,8 +29,8 @@ validate_ichthy <- function(df) {
   if (length(bad_year) > 0) stop("❌ year out of range. Example row: ", bad_year[1])
   
   # ---- 4) Duplicate checks ----
-  dup <- which(duplicated(df$unique_code))
-  if (length(dup) > 0) stop("❌ duplicated unique_code detected. Example dup row: ", dup[1])
+  dup <- which(duplicated(df[c("unique_code", "taxon")]))
+  if (length(dup) > 0) stop("❌ duplicated unique_code + taxon detected. Example dup row: ", dup[1])
   
   # ---- 5) Abundance sanity ----
   if (any(!is.na(df$abundance) & df$abundance < 0)) stop("❌ abundance has negative values.")
