@@ -1,5 +1,9 @@
 *.duckdb
 
+.Renviron
+*.json
+secrets/
+
 # macOS
 .DS_Store
 
