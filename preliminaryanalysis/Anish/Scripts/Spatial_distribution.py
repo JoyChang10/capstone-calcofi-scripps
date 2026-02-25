@@ -54,7 +54,7 @@ ax.set_title("Spatial Distribution of Standardized Fish Abundance")
 ax.set_axis_off()
 
 plt.tight_layout()
-output_path = Path(__file__).parent / "spatial_distribution_abundance.png"
+output_path = Path(__file__).parent / "spatial_distribution_abundance_python.png"
 plt.savefig(output_path, dpi=300, bbox_inches="tight")
 
 print(f"Figure saved to {output_path}")
@@ -96,7 +96,6 @@ scatter2 = ax2.scatter(
 
 ctx.add_basemap(ax2, source=ctx.providers.CartoDB.Positron)
 
-# Build legend
 handles = []
 for i, species in enumerate(categories):
     handles.append(
@@ -117,7 +116,7 @@ ax2.set_axis_off()
 
 plt.tight_layout()
 
-output_path2 = Path(__file__).parent / "dominant_species_map.png"
+output_path2 = Path(__file__).parent / "dominant_species_map_python.png"
 plt.savefig(output_path2, dpi=300, bbox_inches="tight")
 plt.close()
 
