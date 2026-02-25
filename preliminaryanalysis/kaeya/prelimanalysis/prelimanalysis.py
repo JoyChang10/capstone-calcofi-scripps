@@ -5,6 +5,7 @@ from pathlib import Path
 
 DATA_PATH = Path(__file__).resolve().parent.parent / "preliminarydata.csv"
 data = pd.read_csv(DATA_PATH)
+data.rows
 
 print(data.head())
 print(data.columns)
@@ -16,8 +17,8 @@ corr_matrix = subset.corr()
 
 corr_ranked = (
     corr_matrix
-    .where(~corr_matrix.isna())        # safety
-    .stack()                           # matrix → long form
+    .where(~corr_matrix.isna())        
+    .stack()                           
     .reset_index()
 )
 
