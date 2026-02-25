@@ -1,9 +1,13 @@
 library(tidyverse)
 
+
+selected_species <- "Engraulis.mordax"
+# Example:
+# selected_species <- "Engraulis.mordax"
+
 data <- read_csv("preliminaryanalysis/preliminarydata.csv",
                  show_col_types = FALSE)
 
-# Identify Species Columns
 
 meta_cols <- c(
   "", "unique.code", "S_C", "S_SC", "S_L", "S_S",
@@ -14,10 +18,16 @@ species_cols <- setdiff(names(data), meta_cols)
 species_cols <- species_cols[!grepl("^Unnamed", species_cols)]
 
 
-
-data <- data %>%
-  mutate(total_abundance = rowSums(select(., all_of(species_cols)),
-                                   na.rm = TRUE))
+if (is.null(selected_species)) {
+  data <- data %>%
+    mutate(total_abundance = rowSums(select(., all_of(species_cols)),
+                                     na.rm = TRUE))
+  filename_suffix <- "all_species"
+} else {
+  data <- data %>%
+    mutate(total_abundance = .[[selected_species]])
+  filename_suffix <- selected_species
+}
 
 
 
@@ -32,11 +42,12 @@ diagnostic_summary <- data %>%
   )
 
 write_csv(diagnostic_summary,
-          "preliminaryanalysis/Anish/temporal_diagnostic_summary.csv")
+          paste0("preliminaryanalysis/Anish/temporal_diagnostic_summary_",
+                 filename_suffix, ".csv"))
 
 cat("Diagnostic summary saved.\n")
 
-# Plot 1: Mean Abundance
+
 
 mean_plot <- ggplot(diagnostic_summary,
                     aes(x = year,
@@ -45,7 +56,8 @@ mean_plot <- ggplot(diagnostic_summary,
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
   labs(
-    title = "Temporal Trends (Mean Abundance)",
+    title = paste("Temporal Trends (Mean Abundance - ",
+                  filename_suffix, ")", sep = ""),
     x = "Year",
     y = "Mean Total Abundance",
     color = "Season"
@@ -53,14 +65,15 @@ mean_plot <- ggplot(diagnostic_summary,
   theme_minimal()
 
 ggsave(
-  "preliminaryanalysis/Anish/temporal_trends_mean.png",
+  paste0("preliminaryanalysis/Anish/temporal_trends_mean_",
+         filename_suffix, ".png"),
   plot = mean_plot,
   width = 10,
   height = 6,
   dpi = 300
 )
 
-# Plot 2: Median Abundance
+
 
 median_plot <- ggplot(diagnostic_summary,
                       aes(x = year,
@@ -69,7 +82,8 @@ median_plot <- ggplot(diagnostic_summary,
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
   labs(
-    title = "Temporal Trends (Median Abundance)",
+    title = paste("Temporal Trends (Median Abundance - ",
+                  filename_suffix, ")", sep = ""),
     x = "Year",
     y = "Median Total Abundance",
     color = "Season"
@@ -77,7 +91,8 @@ median_plot <- ggplot(diagnostic_summary,
   theme_minimal()
 
 ggsave(
-  "preliminaryanalysis/Anish/temporal_trends_median.png",
+  paste0("preliminaryanalysis/Anish/temporal_trends_median_",
+         filename_suffix, ".png"),
   plot = median_plot,
   width = 10,
   height = 6,

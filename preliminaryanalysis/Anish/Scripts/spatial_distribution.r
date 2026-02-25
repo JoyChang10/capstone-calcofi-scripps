@@ -3,16 +3,12 @@ library(sf)
 library(ggspatial)
 library(viridis)
 
-# =====================================================
-# Load Data
-# =====================================================
+
 
 data <- read_csv("preliminaryanalysis/preliminarydata.csv",
                  show_col_types = FALSE)
 
-# =====================================================
-# Identify Species Columns
-# =====================================================
+
 
 meta_cols <- c(
   "", "unique.code", "S_C", "S_SC", "S_L", "S_S",
@@ -22,9 +18,7 @@ meta_cols <- c(
 species_cols <- setdiff(names(data), meta_cols)
 species_cols <- species_cols[!grepl("^Unnamed", species_cols)]
 
-# =====================================================
-# Compute Total Abundance + Dominant Species
-# =====================================================
+
 
 data <- data %>%
   mutate(
@@ -35,14 +29,11 @@ data <- data %>%
 data <- data %>%
   mutate(size_scaled = (total_abundance / max(total_abundance)) * 3)
 
-# Convert to sf (DO NOT transform here)
 gdf <- st_as_sf(data,
                 coords = c("longitude", "latitude"),
                 crs = 4326)
 
-# =====================================================
-# MAP 1: Abundance + Line Gradient
-# =====================================================
+
 
 map1 <- ggplot(gdf) +
   annotation_map_tile(type = "cartolight") +
@@ -66,9 +57,7 @@ ggsave(
   dpi = 300
 )
 
-# =====================================================
-# MAP 2: Dominant Species (Top 10)
-# =====================================================
+
 
 # Identify dominant species per station
 data$dominant_species <- colnames(select(data, all_of(species_cols)))[
