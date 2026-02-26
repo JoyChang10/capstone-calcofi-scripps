@@ -65,8 +65,11 @@ download_target <- function(drive_file_dribble, download_dir) {
   fid  <- drive_file_dribble$id[[1]]
   name <- drive_file_dribble$name[[1]]
   
-  # prefix with file id to avoid collisions
-  local_path <- fs::path(download_dir, paste0(fid, "__", name))
+  clean_name <- gsub("[^[:alnum:].-]", "_", name)
+  clean_name <- tolower(clean_name)
+  
+  # Prefix with file id to ensure it's absolutely unique
+  local_path <- fs::path(download_dir, paste0(fid, "__", clean_name))
   
   # Download as-is (CSV)
   drive_download(drive_file_dribble, path = local_path, overwrite = TRUE)
@@ -74,6 +77,19 @@ download_target <- function(drive_file_dribble, download_dir) {
   as.character(local_path)
 }
 
+# Inside drive_pull.R
+download_target <- function(drive_file_dribble, download_dir) {
+  fs::dir_create(download_dir)
+  
+  fid  <- drive_file_dribble$id[[1]]
+  
+  # Use a simple, predictable name for the rest of the pipeline
+  standard_name <- "ichthyoplankton_ingest.csv"
+  local_path <- fs::path(download_dir, paste0(fid, "__", standard_name))
+  
+  drive_download(drive_file_dribble, path = local_path, overwrite = TRUE)
+  return(as.character(local_path))
+}
 # -----------------------------
 # Main function
 # -----------------------------

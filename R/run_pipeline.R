@@ -6,7 +6,7 @@ library(janitor)
 
 source("R/auth_config.R")
 source("R/drive_pull.R")
-source("R/validate_rules.R")
+source("R/validate_rules_wide.R")
 
 # Authenticate using the service account
 message("Starting authentication...")
