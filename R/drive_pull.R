@@ -65,31 +65,23 @@ download_target <- function(drive_file_dribble, download_dir) {
   fid  <- drive_file_dribble$id[[1]]
   name <- drive_file_dribble$name[[1]]
   
+  # 1. Sanitize the name: replace spaces/special chars with underscores
   clean_name <- gsub("[^[:alnum:].-]", "_", name)
-  clean_name <- tolower(clean_name)
   
-  # Prefix with file id to ensure it's absolutely unique
+  # 2. Force .csv extension if it's missing
+  if (!grepl("\\.csv$", clean_name, ignore.case = TRUE)) {
+    clean_name <- paste0(clean_name, ".csv")
+  }
+  
+  # 3. Create a clean local path
   local_path <- fs::path(download_dir, paste0(fid, "__", clean_name))
   
-  # Download as-is (CSV)
+  # Download to the calculated path
   drive_download(drive_file_dribble, path = local_path, overwrite = TRUE)
   
-  as.character(local_path)
-}
-
-# Inside drive_pull.R
-download_target <- function(drive_file_dribble, download_dir) {
-  fs::dir_create(download_dir)
-  
-  fid  <- drive_file_dribble$id[[1]]
-  
-  # Use a simple, predictable name for the rest of the pipeline
-  standard_name <- "ichthyoplankton_ingest.csv"
-  local_path <- fs::path(download_dir, paste0(fid, "__", standard_name))
-  
-  drive_download(drive_file_dribble, path = local_path, overwrite = TRUE)
   return(as.character(local_path))
 }
+
 # -----------------------------
 # Main function
 # -----------------------------
@@ -102,9 +94,6 @@ drive_pull_if_changed <- function(
     stop("Missing CALCOFI_TARGET_FILE_ID. Set it via Sys.setenv() or .Renviron.")
   }
   
-  # NOTE: Auth handled outside (Person3 headless later). For interactive runs:
-  # drive_auth()
-  
   state <- read_state(state_path)
   
   # Get fresh metadata from Drive
@@ -114,6 +103,7 @@ drive_pull_if_changed <- function(
   remote_mtime <- get_modified_time(target)
   prev_mtime   <- get_prev_mtime(state, target_file_id)
   
+  # Skip if the file hasn't been modified since last check
   if (!is.na(prev_mtime) && identical(prev_mtime, remote_mtime)) {
     message("[SKIP] No change detected for file_id = ", target_file_id)
     return(list(
@@ -127,8 +117,11 @@ drive_pull_if_changed <- function(
   }
   
   message("[PULL] Change detected (", ifelse(is.na(prev_mtime), "first_time", "modified_time_updated"), ")")
+  
+  # The updated download_target now handles the CSV check and naming
   local_path <- download_target(target, download_dir)
   
+  # Save the new state so we don't download it again next time
   state <- set_file_state(state, target_file_id, remote_mtime, local_path)
   write_state(state, state_path)
   
@@ -141,5 +134,3 @@ drive_pull_if_changed <- function(
     state_path = as.character(state_path)
   )
 }
-
-
