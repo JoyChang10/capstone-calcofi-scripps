@@ -50,8 +50,8 @@ gcs_push_file <- function(local_path, remote_name = basename(local_path), predef
   return(upload_status)
 }
 
-# 4. Usage Example
-gcs_push_file(
-  local_path = "data/processed_parquet/ichthyoplankton_observations.parquet",
-  remote_name = "staging/ichthyoplankton_observations.parquet"
-)
+# Usage Example (comment out)
+# gcs_push_file(
+#   local_path = "data/processed_parquet/ichthyoplankton_observations.parquet",
+#   remote_name = "staging/ichthyoplankton_observations.parquet"
+# )
