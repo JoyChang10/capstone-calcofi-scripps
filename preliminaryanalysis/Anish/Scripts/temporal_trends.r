@@ -1,13 +1,16 @@
 library(tidyverse)
 
-
-selected_species <- "Engraulis.mordax"
+# =====================================================
+# USER INPUT: SPECIES FILTER
+# =====================================================
+selected_species <- NULL
 # Example:
 # selected_species <- "Engraulis.mordax"
 
 data <- read_csv("preliminaryanalysis/preliminarydata.csv",
                  show_col_types = FALSE)
 
+# Identify Species Columns
 
 meta_cols <- c(
   "", "unique.code", "S_C", "S_SC", "S_L", "S_S",
@@ -17,7 +20,15 @@ meta_cols <- c(
 species_cols <- setdiff(names(data), meta_cols)
 species_cols <- species_cols[!grepl("^Unnamed", species_cols)]
 
+# =====================================================
+# FILTER TO CALCOFI CORE REGION (NEW STEP)
+# =====================================================
+data <- data %>%
+  filter(S_L >= 76.7 & S_L <= 93.3)
 
+# =====================================================
+# SPECIES FILTER LOGIC
+# =====================================================
 if (is.null(selected_species)) {
   data <- data %>%
     mutate(total_abundance = rowSums(select(., all_of(species_cols)),
@@ -29,7 +40,9 @@ if (is.null(selected_species)) {
   filename_suffix <- selected_species
 }
 
-
+# =====================================================
+# DIAGNOSTIC SUMMARY
+# =====================================================
 
 diagnostic_summary <- data %>%
   group_by(year, season) %>%
@@ -47,7 +60,7 @@ write_csv(diagnostic_summary,
 
 cat("Diagnostic summary saved.\n")
 
-
+# Plot 1: Mean Abundance
 
 mean_plot <- ggplot(diagnostic_summary,
                     aes(x = year,
@@ -73,7 +86,7 @@ ggsave(
   dpi = 300
 )
 
-
+# Plot 2: Median Abundance
 
 median_plot <- ggplot(diagnostic_summary,
                       aes(x = year,
