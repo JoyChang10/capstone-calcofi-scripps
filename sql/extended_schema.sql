@@ -1,4 +1,4 @@
-CREATE TABLE ichthyoplankton_observations (
+CREATE OR REPLACE TABLE ichthyoplankton_observations (
 
     -- CORE IDENTIFIERS 
     unique_code  TEXT,

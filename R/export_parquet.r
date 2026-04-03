@@ -1,5 +1,5 @@
 source("R/db_init.R")
-out_dir <- "R/parquet"
+out_dir <- "data/parquet"
 
 if(!dir.exists(out_dir)){
     dir.create(out_dir, recursive = TRUE)
