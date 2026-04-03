@@ -1,0 +1,43 @@
+app:
+  title: "Ichthyoplankton Abundance Dashboard"
+  version: "1.0.0"
+
+data:
+  path: "prototype.duckdb"
+  table: "ichthyoplankton_observations"
+  refresh_interval_minutes: 60
+  enable_manual_refresh: true
+
+defaults:
+  year_min: 1951
+  year_max: 2023
+  species: ["engraulis_mordax", "merluccius_productus", "sardinops_sagax"]
+  season: ["spring", "summer", "fall", "winter"]
+  aggregation: "mean"
+  smooth: false
+
+filters:
+  year_range:
+    label: "Year Range"
+    column: "year"
+    type: "slider"
+  species:
+    label: "Species"
+    column: "taxon"
+    type: "multi_select"
+    max_shown: 10
+  season:
+    label: "Season"
+    column: "season"
+    type: "checkbox"
+    choices: ["spring", "summer", "fall", "winter"]
+
+plots:
+  abundance_time:
+    title: "Abundance Through Time"
+    y_label: "Mean Abundance (per tow)"
+    x_label: "Year"
+    color_palette: "Set2"
+    show_points: true
+    show_ribbon: false
+    height: 500
