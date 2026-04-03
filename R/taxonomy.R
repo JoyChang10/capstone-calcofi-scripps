@@ -33,14 +33,33 @@ taxa_df <- tibble(
 taxon_names <- unique(taxa_df$taxon_name)
 
 
+# get_aphia_id <- function(name) {
+#   Sys.sleep(0.3)
+#   
+#   tryCatch({
+#     id <- worrms::wm_name2id(name)
+#     return(as.integer(id))
+#   }, error = function(e) {s
+#     # Print the specific error
+#     message(paste("Could not match:", name, "| Reason:", e$message))
+#     return(NA_integer_)
+#   })
+# }
+
 get_aphia_id <- function(name) {
+  # Add a small delay to respect API rate limits
   Sys.sleep(0.3)
   
   tryCatch({
-    id <- worrms::wm_name2id(name)
-    return(as.integer(id))
+    # Retrieve all matching records for the taxon name
+    res <- worrms::wm_records_name(name)
+    
+    # Return the AphiaID from the first result found
+    # res$AphiaID[1] ensures you only get one value back
+    return(as.integer(res$AphiaID[1]))
+    
   }, error = function(e) {
-    # Print the specific error
+    # If no records are found or the API fails, return NA
     message(paste("Could not match:", name, "| Reason:", e$message))
     return(NA_integer_)
   })
@@ -58,5 +77,5 @@ taxonomy_lookup <- taxa_df %>%
   distinct()
 
 # Save the lookup table for Person 2 to use in the ingest pipeline
-write_csv(taxonomy_lookup, here("data/taxonomy_lookup_fcc.csv"))
+write_csv(taxonomy_lookup, here("data/taxonomy_lookup.csv"))
 message("Taxonomy lookup table created.")
