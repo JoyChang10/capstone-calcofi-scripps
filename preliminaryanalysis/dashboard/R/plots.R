@@ -233,17 +233,3 @@ abundanceTimeServer <- function(id, filtered_data, state, config) {
   })
 }
 
-# ── Module 2–5: Stubs (future plots) ─────────────────────────────────────────
-# Uncomment and implement as needed:
-#
-# spatialDistributionUI     <- function(id) { ... }
-# spatialDistributionServer <- function(id, filtered_data, state, config) { ... }
-#
-# seasonalPatternUI     <- function(id) { ... }
-# seasonalPatternServer <- function(id, filtered_data, state, config) { ... }
-#
-# speciesCompositionUI     <- function(id) { ... }
-# speciesCompositionServer <- function(id, filtered_data, state, config) { ... }
-#
-# correlationUI     <- function(id) { ... }
-# correlationServer <- function(id, filtered_data, state, config) { ... }

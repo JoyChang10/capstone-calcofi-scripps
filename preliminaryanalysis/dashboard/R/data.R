@@ -2,7 +2,6 @@
 # Loads data from DuckDB, returns dataset + metadata
 # Handles refresh behavior defined in config
 #
-# Performance strategy:
 #   - Open one persistent read-only connection per app session
 #   - Pull only the columns needed for filtering + plotting
 #   - Pre-aggregate mean/median/sum/max in DuckDB before transferring to R
