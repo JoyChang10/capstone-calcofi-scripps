@@ -25,7 +25,7 @@ resolve_db_path <- function(config) {
   stop(paste("Database not found:", p))
 }
 
-# ── Load raw data (columns needed for filters + plots) ───────────────────────
+# ── Load raw data (columns needed for filters & plots) ───────────────────────
 
 load_data <- function(config) {
   tryCatch({
@@ -33,7 +33,7 @@ load_data <- function(config) {
     con     <- get_con(db_path)
     tbl     <- config$data$table
 
-    # Pull only the columns we actually use — avoids transferring unused fields
+    # Pull only the columns we actually use (avoids transferring unused fields)
     df <- DBI::dbGetQuery(con, paste0(
       "SELECT year, season, taxon, abundance ",
       "FROM ", tbl, " ",
@@ -65,9 +65,8 @@ load_data <- function(config) {
   })
 }
 
-# ── Pre-aggregate in DuckDB for a given filter state ─────────────────────────
-# Returns a small data.frame (~taxa × years rows) ready for plotting.
-# Much faster than pulling 81k rows then aggregating in R.
+# ── Preaggregate in DuckDB for a given filter state ─────────────────────────
+# Returns a small data.frame (taxa × years rows) for plotting
 
 query_aggregated <- function(config, year_min, year_max, seasons, species, agg_method) {
   tryCatch({
@@ -83,7 +82,7 @@ query_aggregated <- function(config, year_min, year_max, seasons, species, agg_m
       "AVG(abundance)"
     )
 
-    # Build WHERE clause safely
+    # Build WHERE clause 
     seasons_str <- paste0("'", seasons, "'", collapse = ", ")
     species_str <- paste0("'", species, "'", collapse = ", ")
 

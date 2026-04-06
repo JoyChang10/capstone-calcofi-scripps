@@ -1,6 +1,6 @@
 # R/ui.R
 # Builds the full UI layout
-# Called by app.R with config + initial data
+# Called by app.R with config and initial data
 
 build_ui <- function(config, data_result) {
   shiny::fluidPage(

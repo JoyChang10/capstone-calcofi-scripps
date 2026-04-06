@@ -1,8 +1,6 @@
 # R/plots.R
 # ── Plot Modules ─────────────────────────────────────────────────────────────
-# Each section defines one plot module: UI + server logic
-# Currently implemented: Abundance Through Time
-# Additional modules stubbed for future use
+# Each section defines one plot module: UI and server logic
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,7 +24,7 @@ agg_label <- function(method) {
   )
 }
 
-# Species colour palette (consistent across plots)
+# Species color palette (consistent across plots)
 make_species_palette <- function(species, palette = "Set2") {
   n   <- length(species)
   if (n == 0) return(character(0))
@@ -37,9 +35,9 @@ make_species_palette <- function(species, palette = "Set2") {
 
 pretty_taxon <- function(x) tools::toTitleCase(gsub("_", " ", x))
 
-# ── Module 1: Abundance Through Time ─────────────────────────────────────────
+# ── Plot 1: Abundance Through Time ─────────────────────────────────────────
 
-#' UI component
+# UI component
 abundanceTimeUI <- function(id) {
   ns <- shiny::NS(id)
   shiny::div(
@@ -102,7 +100,7 @@ abundanceTimeServer <- function(id, filtered_data, state, config) {
       glue::glue("{sp} species · {yr[1]}–{yr[2]} · {agg_label(state$aggregation)} per year")
     })
 
-    # ── No-data message ─────────────────────────────────────────────────────
+    # ── No data message ─────────────────────────────────────────────────────
     output$no_data_msg <- shiny::renderUI({
       pd <- plot_data()
       if (is.null(pd) || nrow(pd) == 0) {

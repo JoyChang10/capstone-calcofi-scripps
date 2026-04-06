@@ -2,7 +2,7 @@
 # Handles dashboard-level exports:
 #   - Full filtered dataset as CSV
 #   - Summary table as CSV
-#   - PDF report (plot + summary stats)
+#   - PDF report (plot & summary stats)
 
 # ── UI Component ─────────────────────────────────────────────────────────────
 
