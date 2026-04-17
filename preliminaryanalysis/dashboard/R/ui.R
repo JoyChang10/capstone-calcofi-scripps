@@ -2,7 +2,7 @@
 # Builds the full UI layout
 # Called by app.R with config and initial data
 
-build_ui <- function(config, data_result) {
+build_ui <- function(config, data_result, habitat_lookup = NULL) {
   shiny::fluidPage(
     title = config$app$title,
     shiny::tags$head(
@@ -50,10 +50,24 @@ build_ui <- function(config, data_result) {
 
       # Content area
       shiny::div(
-        class = "content",
-        shiny::div(
-          class = "plots-grid",
-          abundanceTimeUI("abundance_time")
+        style = "width: 100%; padding-top: 4px;",
+        shiny::tabsetPanel(
+          shiny::tabPanel("Abundance Through Time",
+                          shiny::br(),
+                          abundanceTimeUI("abundance_time")
+          ),
+          shiny::tabPanel("Correlation Heatmap",
+                          shiny::br(),
+                          corrHeatmapUI("corr_heatmap")
+          ),
+          shiny::tabPanel("Stability & Variability",
+                          shiny::br(),
+                          meanVarUI("mean_var")
+          ),
+          shiny::tabPanel("Abundance Bar Chart",
+                          shiny::br(),
+                          abundanceBarUI("abundance_bar")
+          )
         )
       )
     )

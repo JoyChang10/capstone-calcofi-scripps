@@ -379,3 +379,11 @@ body {
 
 /* ── Utility ──────────────────────────────────────────────────── */
 .filter-error { color: #fc8181; font-size: 13px; padding: 10px; }
+
+.tab-content .plot-card {
+  width: 100%;
+}
+
+.tab-content {
+  padding: 0 8px;
+}
