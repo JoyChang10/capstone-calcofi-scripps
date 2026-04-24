@@ -1,0 +1,55 @@
+# config_template.yaml
+dataset:
+  name: example_dataset
+  description: "Breif description of the dataset"
+  data_structure: wide
+  taxonomy_source: itis
+
+source:
+  file_path: "data/raw/example.csv"
+  file_type: csv
+  delimiter: ","
+
+date:
+  format_type: split_columns
+  date_format: "YYYY-MM-DD"
+  source_columns:
+    year: year
+    season: season
+
+columns:
+  mappings:
+    original_latitude: latitude
+    original_longitude: longitude
+    original_year: year
+    original_species_code: taxon_code
+    original_abundance: abundance
+
+  types:
+    latitude: double
+    longitude: double
+    year: integer
+    season: string
+    taxon_code: string
+    abundance: double
+
+  null_indicators:
+    global: ["NA", "N/A", "", -999, -9999]
+    by_column:
+      abundance: [-999, -9999]
+      latitude: [-999]
+
+taxonomy:
+  source: itis
+  code_column: taxon_code
+  scientific_name_column: scientific_name
+  output_id_column: itis_tsn
+
+pivot:
+  id_columns:
+    - latitude
+    - longitude
+    - year
+    - season
+  name_to: taxon
+  value_to: abundance
