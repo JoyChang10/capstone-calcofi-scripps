@@ -67,6 +67,22 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
           shiny::tabPanel("Abundance Bar Chart",
                           shiny::br(),
                           abundanceBarUI("abundance_bar")
+          ),
+          shiny::tabPanel("Temporal Trends",
+                          shiny::br(),
+                          temporalTrendsUI("temporal_trends")
+          ),
+          shiny::tabPanel("Time Series by Period",
+                          shiny::br(),
+                          timeSeriesUI("time_series")
+          ),
+          shiny::tabPanel("Habitat Time Series",
+                          shiny::br(),
+                          habitatTimeSeriesUI("habitat_time_series")
+          ),
+          shiny::tabPanel("Spatial Distribution",
+                          shiny::br(),
+                          spatialMapUI("spatial_map")
           )
         )
       )

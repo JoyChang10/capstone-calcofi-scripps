@@ -42,7 +42,46 @@ build_filter_ui <- function(config, data_result, habitat_lookup = NULL) {
     ),
     
     shiny::hr(class = "filter-divider"),
-    
+
+    # ── Season ────────────────────────────────────────────────────────────
+    shiny::div(
+      class = "filter-section",
+      shiny::div(class = "filter-label", "Season"),
+      shiny::checkboxGroupInput(
+        inputId  = "season_check", label = NULL,
+        choices  = c("Spring" = "spring", "Summer" = "summer",
+                     "Fall"   = "fall",   "Winter" = "winter"),
+        selected = config$defaults$season,
+        inline   = TRUE
+      )
+    ),
+
+    shiny::hr(class = "filter-divider"),
+
+    # ── Time Period ───────────────────────────────────────────────────────
+    shiny::div(
+      class = "filter-section",
+      shiny::div(
+        class = "filter-label-row",
+        shiny::div(class = "filter-label", "Time Period"),
+        shiny::div(
+          class = "filter-label-actions",
+          shiny::actionLink("select_all_periods", "All"),
+          shiny::span(" · "),
+          shiny::actionLink("deselect_all_periods", "None")
+        )
+      ),
+      shiny::checkboxGroupInput(
+        inputId  = "period_check", label = NULL,
+        choices  = c("1951–1976", "1977–1998",
+                     "1999–2014", "2015–present"),
+        selected = c("1951–1976", "1977–1998",
+                     "1999–2014", "2015–present")
+      )
+    ),
+
+    shiny::hr(class = "filter-divider"),
+
     # ── Filter Mode ───────────────────────────────────────────────────────
     shiny::div(
       class = "filter-section",

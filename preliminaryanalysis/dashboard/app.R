@@ -11,6 +11,7 @@ library(glue)
 library(yaml)
 library(tools)
 library(dplyr)
+library(leaflet)
 
 source("R/data.R")
 source("R/state.R")
@@ -22,7 +23,7 @@ source("R/ui.R")
 config <- yaml::read_yaml("config.yml")
 
 initial_data <- load_data(config)
-if (!is.null(initial_data$error)) message("⚠ Data load error: ", initial_data$error)
+if (!is.null(initial_data$error)) message("Data load error: ", initial_data$error)
 
 habitat_lookup <- readr::read_csv(
   "csvs/species_habitat_categories2.csv",
@@ -80,6 +81,14 @@ server <- function(input, output, session) {
   shiny::observeEvent(input$deselect_all_species, {
     shiny::updateSelectizeInput(session, "species_select", selected = character(0))
   })
+  all_periods <- c("1951–1976", "1977–1998", "1999–2014", "2015–present")
+  shiny::observeEvent(input$select_all_periods, {
+    shiny::updateCheckboxGroupInput(session, "period_check", selected = all_periods)
+  })
+  shiny::observeEvent(input$deselect_all_periods, {
+    shiny::updateCheckboxGroupInput(session, "period_check", selected = character(0))
+  })
+
   shiny::observeEvent(input$select_top_species, {
     df <- data_rv()$data
     if (is.null(df)) return()
@@ -128,6 +137,10 @@ server <- function(input, output, session) {
   corrHeatmapServer("corr_heatmap",     filtered_data, state, config, habitat_lookup)
   meanVarServer("mean_var",             filtered_data, state, config, habitat_lookup)
   abundanceBarServer("abundance_bar",   filtered_data, state, config, habitat_lookup)
+  temporalTrendsServer("temporal_trends",          state, config)
+  timeSeriesServer("time_series",                  state, config)
+  habitatTimeSeriesServer("habitat_time_series",   state, config, habitat_lookup)
+  spatialMapServer("spatial_map",                  state, config)
 }
 
 shiny::shinyApp(ui, server)

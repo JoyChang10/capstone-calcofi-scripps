@@ -20,6 +20,8 @@ init_state <- function(config, data_result) {
     habitat_submode  = "habitat_type",
     habitat_select   = c("pelagic", "benthic"),
     grpname_select   = c("coastal", "oceanic", "coastal-oceanic"),
+    selected_periods = c("1951–1976", "1977–1998",
+                         "1999–2014", "2015–present"),
     last_updated     = Sys.time()
   )
 }
@@ -49,5 +51,8 @@ update_state <- function(state, input) {
   }
   if (!is.null(input$grpname_select)) {
     state$grpname_select <- input$grpname_select
+  }
+  if (!is.null(input$period_check)) {
+    state$selected_periods <- input$period_check
   }
 }

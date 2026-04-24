@@ -694,3 +694,608 @@ abundanceBarServer <- function(id, filtered_data, state, config, habitat_lookup 
     )
   })
 }
+
+# ── Plot 5: Temporal Trends by Season ────────────────────────────────────────
+
+temporalTrendsUI <- function(id) {
+  ns <- shiny::NS(id)
+  shiny::div(
+    class = "plot-card",
+    shiny::div(
+      class = "plot-header",
+      shiny::div(
+        class = "plot-title-row",
+        shiny::h3("Temporal Trends by Season", class = "plot-title"),
+        shiny::div(
+          class = "plot-controls-inline",
+          shiny::downloadButton(ns("dl_plot"), "", icon = shiny::icon("download"),
+                                class = "btn-icon", title = "Download plot"),
+          shiny::downloadButton(ns("dl_data"), "", icon = shiny::icon("table"),
+                                class = "btn-icon", title = "Download data")
+        )
+      ),
+      shiny::div(
+        class = "plot-controls-inline",
+        shiny::radioButtons(ns("metric"), label = "Show:",
+                            choices  = c("Mean" = "mean", "Median" = "median"),
+                            selected = "mean", inline = TRUE)
+      ),
+      shiny::div(class = "plot-subtitle", shiny::textOutput(ns("plot_subtitle"), inline = TRUE))
+    ),
+    shiny::div(
+      class = "plot-body",
+      plotly::plotlyOutput(ns("plot"), height = "460px") |>
+        shinycssloaders::withSpinner(type = 6, color = "#2E86AB", size = 0.6)
+    ),
+    shiny::div(class = "plot-footer", shiny::uiOutput(ns("no_data_msg")))
+  )
+}
+
+temporalTrendsServer <- function(id, state, config) {
+  shiny::moduleServer(id, function(input, output, session) {
+
+    plot_data <- shiny::reactive({
+      shiny::req(length(state$selected_species) > 0, length(state$selected_seasons) > 0)
+      query_temporal_trends(
+        config,
+        year_min = state$year_min,
+        year_max = state$year_max,
+        seasons  = state$selected_seasons,
+        species  = state$selected_species
+      )
+    })
+
+    output$plot_subtitle <- shiny::renderText({
+      yr <- c(state$year_min, state$year_max)
+      glue::glue("{yr[1]}–{yr[2]} · Total abundance across selected species, broken down by season")
+    })
+
+    output$no_data_msg <- shiny::renderUI({
+      pd <- tryCatch(plot_data(), error = function(e) NULL)
+      if (is.null(pd) || nrow(pd) == 0)
+        shiny::div(class = "no-data-msg", shiny::icon("circle-exclamation"),
+                   " No data matches the current filters.")
+    })
+
+    output$plot <- plotly::renderPlotly({
+      pd <- plot_data(); shiny::req(nrow(pd) > 0)
+
+      y_col   <- if (input$metric == "mean") "mean_abundance" else "median_abundance"
+      y_label <- if (input$metric == "mean") "Mean Total Abundance" else "Median Total Abundance"
+
+      pd$y_val        <- pd[[y_col]]
+      pd$season_label <- tools::toTitleCase(as.character(pd$season))
+
+      season_colors <- c(Spring = "#4DAF4A", Summer = "#FF7F00",
+                         Fall   = "#E41A1C", Winter = "#377EB8")
+
+      p <- ggplot2::ggplot(pd, ggplot2::aes(
+        x     = year,
+        y     = y_val,
+        color = season_label,
+        group = season_label,
+        text  = paste0(
+          "<b>", season_label, "</b><br>",
+          "Year: ", year, "<br>",
+          y_label, ": ", formatC(y_val, format = "f", digits = 1, big.mark = ",")
+        )
+      )) +
+        ggplot2::geom_line(linewidth = 0.9, alpha = 0.85) +
+        ggplot2::geom_point(size = 1.8, alpha = 0.9) +
+        ggplot2::scale_color_manual(values = season_colors, name = "Season") +
+        ggplot2::scale_y_continuous(labels = scales::label_comma(),
+                                    expand = ggplot2::expansion(mult = c(0.02, 0.08))) +
+        ggplot2::scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+        ggplot2::labs(x = "Year", y = y_label) +
+        ggplot2::theme_minimal(base_size = 13) +
+        ggplot2::theme(
+          panel.grid.minor   = ggplot2::element_blank(),
+          panel.grid.major.x = ggplot2::element_blank(),
+          axis.title         = ggplot2::element_text(size = 11, color = "#555"),
+          legend.title       = ggplot2::element_text(size = 11, face = "bold"),
+          legend.text        = ggplot2::element_text(size = 10),
+          plot.background    = ggplot2::element_rect(fill = "transparent", color = NA),
+          panel.background   = ggplot2::element_rect(fill = "transparent", color = NA)
+        )
+
+      plotly::ggplotly(p, tooltip = "text") |>
+        plotly::layout(
+          legend = list(orientation = "v", x = 1.02, y = 0.98,
+                        bgcolor = "rgba(255,255,255,0.85)", bordercolor = "#ddd", borderwidth = 1),
+          margin = list(l = 60, r = 160, t = 20, b = 60),
+          paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)"
+        ) |>
+        plotly::config(
+          displayModeBar = TRUE,
+          modeBarButtonsToRemove = c("lasso2d", "select2d", "autoScale2d"),
+          toImageButtonOptions = list(format = "png", filename = "temporal_trends",
+                                      width = 1200, height = 600)
+        )
+    })
+
+    output$dl_plot <- shiny::downloadHandler(
+      filename = function() paste0("temporal_trends_", Sys.Date(), ".png"),
+      content  = function(file) {
+        pd <- plot_data(); shiny::req(nrow(pd) > 0)
+        y_col   <- if (input$metric == "mean") "mean_abundance" else "median_abundance"
+        y_label <- if (input$metric == "mean") "Mean Total Abundance" else "Median Total Abundance"
+        pd$y_val        <- pd[[y_col]]
+        pd$season_label <- tools::toTitleCase(as.character(pd$season))
+        season_colors   <- c(Spring = "#4DAF4A", Summer = "#FF7F00", Fall = "#E41A1C", Winter = "#377EB8")
+        p <- ggplot2::ggplot(pd, ggplot2::aes(x = year, y = y_val,
+                                               color = season_label, group = season_label)) +
+          ggplot2::geom_line(linewidth = 1) + ggplot2::geom_point(size = 2) +
+          ggplot2::scale_color_manual(values = season_colors, name = "Season") +
+          ggplot2::scale_y_continuous(labels = scales::label_comma()) +
+          ggplot2::labs(title = paste("Temporal Trends —", y_label), x = "Year", y = y_label) +
+          ggplot2::theme_minimal(base_size = 14)
+        ggplot2::ggsave(file, p, width = 12, height = 6, dpi = 150, bg = "white")
+      }
+    )
+
+    output$dl_data <- shiny::downloadHandler(
+      filename = function() paste0("temporal_trends_", Sys.Date(), ".csv"),
+      content  = function(file) utils::write.csv(plot_data(), file, row.names = FALSE)
+    )
+  })
+}
+
+# ── Plot 6: Time Series by Historical Period ──────────────────────────────────
+
+timeSeriesUI <- function(id) {
+  ns <- shiny::NS(id)
+  shiny::div(
+    class = "plot-card",
+    shiny::div(
+      class = "plot-header",
+      shiny::div(
+        class = "plot-title-row",
+        shiny::h3("Time Series by Period", class = "plot-title"),
+        shiny::div(
+          class = "plot-controls-inline",
+          shiny::downloadButton(ns("dl_plot"), "", icon = shiny::icon("download"),
+                                class = "btn-icon", title = "Download plot"),
+          shiny::downloadButton(ns("dl_data"), "", icon = shiny::icon("table"),
+                                class = "btn-icon", title = "Download data")
+        )
+      ),
+      shiny::div(class = "plot-subtitle", shiny::textOutput(ns("plot_subtitle"), inline = TRUE))
+    ),
+    shiny::div(
+      class = "plot-body",
+      plotly::plotlyOutput(ns("plot"), height = "460px") |>
+        shinycssloaders::withSpinner(type = 6, color = "#2E86AB", size = 0.6)
+    ),
+    shiny::div(class = "plot-footer", shiny::uiOutput(ns("no_data_msg")))
+  )
+}
+
+timeSeriesServer <- function(id, state, config) {
+  shiny::moduleServer(id, function(input, output, session) {
+
+    plot_data <- shiny::reactive({
+      shiny::req(length(state$selected_species) > 0, length(state$selected_seasons) > 0)
+
+      pd <- query_aggregated(
+        config,
+        year_min   = state$year_min,
+        year_max   = state$year_max,
+        seasons    = state$selected_seasons,
+        species    = state$selected_species,
+        agg_method = state$aggregation
+      )
+      shiny::req(nrow(pd) > 0)
+
+      pd |>
+        dplyr::mutate(period = dplyr::case_when(
+          year >= 1951 & year <= 1976 ~ "1951–1976",
+          year >  1976 & year <= 1998 ~ "1977–1998",
+          year >  1998 & year <= 2014 ~ "1999–2014",
+          year >  2014               ~ "2015–present",
+          TRUE ~ NA_character_
+        )) |>
+        dplyr::filter(!is.na(period), period %in% state$selected_periods)
+    })
+
+    output$plot_subtitle <- shiny::renderText({
+      pd <- plot_data()
+      sp <- length(unique(pd$taxon_display))
+      glue::glue("{sp} species · {state$year_min}–{state$year_max} · {agg_label(state$aggregation)} faceted by period")
+    })
+
+    output$no_data_msg <- shiny::renderUI({
+      pd <- tryCatch(plot_data(), error = function(e) NULL)
+      if (is.null(pd) || nrow(pd) == 0)
+        shiny::div(class = "no-data-msg", shiny::icon("circle-exclamation"),
+                   " No data matches the current filters.")
+    })
+
+    output$plot <- plotly::renderPlotly({
+      pd <- plot_data(); shiny::req(nrow(pd) > 0)
+
+      period_order <- c("1951–1976", "1977–1998", "1999–2014", "2015–present")
+      pd$period    <- factor(pd$period, levels = period_order)
+
+      pal         <- make_species_palette(sort(unique(pd$taxon)), config$plots$abundance_time$color_palette)
+      pal_display <- stats::setNames(pal, sort(unique(pd$taxon_display)))
+
+      p <- ggplot2::ggplot(pd, ggplot2::aes(
+        x     = year,
+        y     = abundance,
+        color = taxon_display,
+        group = taxon_display,
+        text  = paste0(
+          "<b>", taxon_display, "</b><br>",
+          "Year: ", year, "<br>",
+          agg_label(state$aggregation), ": ",
+          formatC(abundance, format = "f", digits = 1, big.mark = ",")
+        )
+      )) +
+        ggplot2::geom_line(linewidth = 0.9, alpha = 0.85) +
+        ggplot2::geom_point(size = 1.8, alpha = 0.9) +
+        ggplot2::facet_wrap(~ period, scales = "free_x") +
+        ggplot2::scale_color_manual(values = pal_display, name = "Species") +
+        ggplot2::scale_y_continuous(labels = scales::label_comma(),
+                                    expand = ggplot2::expansion(mult = c(0.02, 0.08))) +
+        ggplot2::labs(x = "Year", y = agg_label(state$aggregation)) +
+        ggplot2::theme_minimal(base_size = 12) +
+        ggplot2::theme(
+          panel.grid.minor   = ggplot2::element_blank(),
+          panel.grid.major.x = ggplot2::element_blank(),
+          strip.text         = ggplot2::element_text(size = 11, face = "bold"),
+          axis.title         = ggplot2::element_text(size = 11, color = "#555"),
+          legend.title       = ggplot2::element_text(size = 11, face = "bold"),
+          legend.text        = ggplot2::element_text(size = 10),
+          plot.background    = ggplot2::element_rect(fill = "transparent", color = NA),
+          panel.background   = ggplot2::element_rect(fill = "transparent", color = NA)
+        )
+
+      plotly::ggplotly(p, tooltip = "text") |>
+        plotly::layout(
+          legend = list(orientation = "v", x = 1.02, y = 0.98,
+                        bgcolor = "rgba(255,255,255,0.85)", bordercolor = "#ddd", borderwidth = 1),
+          margin = list(l = 60, r = 160, t = 20, b = 60),
+          paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)"
+        ) |>
+        plotly::config(
+          displayModeBar = TRUE,
+          modeBarButtonsToRemove = c("lasso2d", "select2d", "autoScale2d"),
+          toImageButtonOptions = list(format = "png", filename = "time_series_period",
+                                      width = 1400, height = 700)
+        )
+    })
+
+    output$dl_plot <- shiny::downloadHandler(
+      filename = function() paste0("time_series_period_", Sys.Date(), ".png"),
+      content  = function(file) {
+        pd <- plot_data(); shiny::req(nrow(pd) > 0)
+        pal         <- make_species_palette(sort(unique(pd$taxon)), config$plots$abundance_time$color_palette)
+        pal_display <- stats::setNames(pal, sort(unique(pd$taxon_display)))
+        pd$period   <- factor(pd$period, levels = c("1951–1976", "1977–1998",
+                                                      "1999–2014", "2015–present"))
+        p <- ggplot2::ggplot(pd, ggplot2::aes(x = year, y = abundance,
+                                               color = taxon_display, group = taxon_display)) +
+          ggplot2::geom_line(linewidth = 1) + ggplot2::geom_point(size = 2) +
+          ggplot2::facet_wrap(~ period, scales = "free_x") +
+          ggplot2::scale_color_manual(values = pal_display, name = "Species") +
+          ggplot2::scale_y_continuous(labels = scales::label_comma()) +
+          ggplot2::labs(title = "Time Series by Period", x = "Year", y = agg_label(state$aggregation)) +
+          ggplot2::theme_minimal(base_size = 14) +
+          ggplot2::theme(strip.text = ggplot2::element_text(face = "bold"))
+        ggplot2::ggsave(file, p, width = 14, height = 7, dpi = 150, bg = "white")
+      }
+    )
+
+    output$dl_data <- shiny::downloadHandler(
+      filename = function() paste0("time_series_period_", Sys.Date(), ".csv"),
+      content  = function(file) utils::write.csv(plot_data(), file, row.names = FALSE)
+    )
+  })
+}
+
+# ── Plot 7: Habitat Time Series by Period ─────────────────────────────────────
+
+habitatTimeSeriesUI <- function(id) {
+  ns <- shiny::NS(id)
+  shiny::div(
+    class = "plot-card",
+    shiny::div(
+      class = "plot-header",
+      shiny::div(
+        class = "plot-title-row",
+        shiny::h3("Habitat Time Series by Period", class = "plot-title"),
+        shiny::div(
+          class = "plot-controls-inline",
+          shiny::downloadButton(ns("dl_plot"), "", icon = shiny::icon("download"),
+                                class = "btn-icon", title = "Download plot"),
+          shiny::downloadButton(ns("dl_data"), "", icon = shiny::icon("table"),
+                                class = "btn-icon", title = "Download data")
+        )
+      ),
+      shiny::div(class = "plot-subtitle", shiny::textOutput(ns("plot_subtitle"), inline = TRUE))
+    ),
+    shiny::div(
+      class = "plot-body",
+      plotly::plotlyOutput(ns("plot"), height = "460px") |>
+        shinycssloaders::withSpinner(type = 6, color = "#2E86AB", size = 0.6)
+    ),
+    shiny::div(class = "plot-footer", shiny::uiOutput(ns("no_data_msg")))
+  )
+}
+
+habitatTimeSeriesServer <- function(id, state, config, habitat_lookup) {
+  shiny::moduleServer(id, function(input, output, session) {
+
+    plot_data <- shiny::reactive({
+      shiny::req(length(state$selected_species) > 0, length(state$selected_seasons) > 0)
+
+      pd <- query_aggregated(
+        config,
+        year_min   = state$year_min,
+        year_max   = state$year_max,
+        seasons    = state$selected_seasons,
+        species    = state$selected_species,
+        agg_method = "mean"
+      )
+      shiny::req(nrow(pd) > 0)
+
+      pd |>
+        dplyr::left_join(
+          habitat_lookup |> dplyr::select(species_clean, habitat),
+          by = c("taxon" = "species_clean")
+        ) |>
+        dplyr::filter(!is.na(habitat)) |>
+        dplyr::group_by(year, habitat) |>
+        dplyr::summarise(mean_abundance = mean(abundance, na.rm = TRUE), .groups = "drop") |>
+        dplyr::mutate(
+          habitat = tools::toTitleCase(trimws(habitat)),
+          period  = dplyr::case_when(
+            year >= 1951 & year <= 1976 ~ "1951–1976",
+            year >  1976 & year <= 1998 ~ "1977–1998",
+            year >  1998 & year <= 2014 ~ "1999–2014",
+            year >  2014               ~ "2015–present",
+            TRUE ~ NA_character_
+          )
+        ) |>
+        dplyr::filter(!is.na(period), period %in% state$selected_periods)
+    })
+
+    output$plot_subtitle <- shiny::renderText({
+      pd <- plot_data()
+      hab <- length(unique(pd$habitat))
+      glue::glue("{hab} habitat types · {state$year_min}–{state$year_max} · Mean abundance by habitat and period")
+    })
+
+    output$no_data_msg <- shiny::renderUI({
+      pd <- tryCatch(plot_data(), error = function(e) NULL)
+      if (is.null(pd) || nrow(pd) == 0)
+        shiny::div(class = "no-data-msg", shiny::icon("circle-exclamation"),
+                   " No habitat data available. Check that selected species have habitat assignments.")
+    })
+
+    output$plot <- plotly::renderPlotly({
+      pd <- plot_data(); shiny::req(nrow(pd) > 0)
+
+      period_order <- c("1951–1976", "1977–1998", "1999–2014", "2015–present")
+      pd$period    <- factor(pd$period, levels = period_order)
+
+      habitat_colors <- c(Pelagic = "#2E86AB", Benthic = "#E84855",
+                          "Coastal-Oceanic" = "#F9A825", Other = "#888888")
+
+      p <- ggplot2::ggplot(pd, ggplot2::aes(
+        x     = year,
+        y     = mean_abundance,
+        color = habitat,
+        group = habitat,
+        text  = paste0(
+          "<b>", habitat, "</b><br>",
+          "Year: ", year, "<br>",
+          "Mean Abundance: ", formatC(mean_abundance, format = "f", digits = 1, big.mark = ",")
+        )
+      )) +
+        ggplot2::geom_line(linewidth = 0.9, alpha = 0.85) +
+        ggplot2::geom_point(size = 1.8, alpha = 0.9) +
+        ggplot2::facet_wrap(~ period, scales = "free_x") +
+        ggplot2::scale_color_manual(values = habitat_colors, name = "Habitat") +
+        ggplot2::scale_y_continuous(labels = scales::label_comma(),
+                                    expand = ggplot2::expansion(mult = c(0.02, 0.08))) +
+        ggplot2::labs(x = "Year", y = "Mean Abundance") +
+        ggplot2::theme_minimal(base_size = 12) +
+        ggplot2::theme(
+          panel.grid.minor   = ggplot2::element_blank(),
+          panel.grid.major.x = ggplot2::element_blank(),
+          strip.text         = ggplot2::element_text(size = 11, face = "bold"),
+          axis.title         = ggplot2::element_text(size = 11, color = "#555"),
+          legend.title       = ggplot2::element_text(size = 11, face = "bold"),
+          legend.text        = ggplot2::element_text(size = 10),
+          plot.background    = ggplot2::element_rect(fill = "transparent", color = NA),
+          panel.background   = ggplot2::element_rect(fill = "transparent", color = NA)
+        )
+
+      plotly::ggplotly(p, tooltip = "text") |>
+        plotly::layout(
+          legend = list(orientation = "v", x = 1.02, y = 0.98,
+                        bgcolor = "rgba(255,255,255,0.85)", bordercolor = "#ddd", borderwidth = 1),
+          margin = list(l = 60, r = 160, t = 20, b = 60),
+          paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)"
+        ) |>
+        plotly::config(
+          displayModeBar = TRUE,
+          modeBarButtonsToRemove = c("lasso2d", "select2d", "autoScale2d"),
+          toImageButtonOptions = list(format = "png", filename = "habitat_time_series",
+                                      width = 1400, height = 700)
+        )
+    })
+
+    output$dl_plot <- shiny::downloadHandler(
+      filename = function() paste0("habitat_time_series_", Sys.Date(), ".png"),
+      content  = function(file) {
+        pd <- plot_data(); shiny::req(nrow(pd) > 0)
+        pd$period <- factor(pd$period, levels = c("1951–1976", "1977–1998",
+                                                    "1999–2014", "2015–present"))
+        habitat_colors <- c(Pelagic = "#2E86AB", Benthic = "#E84855",
+                            "Coastal-Oceanic" = "#F9A825", Other = "#888888")
+        p <- ggplot2::ggplot(pd, ggplot2::aes(x = year, y = mean_abundance,
+                                               color = habitat, group = habitat)) +
+          ggplot2::geom_line(linewidth = 1) + ggplot2::geom_point(size = 2) +
+          ggplot2::facet_wrap(~ period, scales = "free_x") +
+          ggplot2::scale_color_manual(values = habitat_colors, name = "Habitat") +
+          ggplot2::scale_y_continuous(labels = scales::label_comma()) +
+          ggplot2::labs(title = "Habitat Time Series by Period", x = "Year", y = "Mean Abundance") +
+          ggplot2::theme_minimal(base_size = 14) +
+          ggplot2::theme(strip.text = ggplot2::element_text(face = "bold"))
+        ggplot2::ggsave(file, p, width = 14, height = 7, dpi = 150, bg = "white")
+      }
+    )
+
+    output$dl_data <- shiny::downloadHandler(
+      filename = function() paste0("habitat_time_series_", Sys.Date(), ".csv"),
+      content  = function(file) utils::write.csv(plot_data(), file, row.names = FALSE)
+    )
+  })
+}
+
+# ── Plot 8: Spatial Distribution Map ─────────────────────────────────────────
+
+spatialMapUI <- function(id) {
+  ns <- shiny::NS(id)
+  shiny::div(
+    class = "plot-card",
+    shiny::div(
+      class = "plot-header",
+      shiny::div(
+        class = "plot-title-row",
+        shiny::h3("Spatial Distribution", class = "plot-title"),
+        shiny::div(
+          class = "plot-controls-inline",
+          shiny::downloadButton(ns("dl_data"), "", icon = shiny::icon("table"),
+                                class = "btn-icon", title = "Download station data")
+        )
+      ),
+      shiny::div(
+        class = "plot-controls-inline",
+        shiny::radioButtons(ns("map_mode"), label = "Color by:",
+                            choices  = c("CalCOFI Line" = "line", "Dominant Species" = "species"),
+                            selected = "line", inline = TRUE)
+      ),
+      shiny::div(class = "plot-subtitle", shiny::textOutput(ns("plot_subtitle"), inline = TRUE))
+    ),
+    shiny::div(
+      class = "plot-body",
+      leaflet::leafletOutput(ns("map"), height = "460px") |>
+        shinycssloaders::withSpinner(type = 6, color = "#2E86AB", size = 0.6)
+    ),
+    shiny::div(class = "plot-footer", shiny::uiOutput(ns("no_data_msg")))
+  )
+}
+
+spatialMapServer <- function(id, state, config) {
+  shiny::moduleServer(id, function(input, output, session) {
+
+    raw_data <- shiny::reactive({
+      shiny::req(length(state$selected_species) > 0, length(state$selected_seasons) > 0)
+      query_spatial(
+        config,
+        year_min = state$year_min,
+        year_max = state$year_max,
+        seasons  = state$selected_seasons,
+        species  = state$selected_species
+      )
+    })
+
+    station_data <- shiny::reactive({
+      pd <- raw_data(); shiny::req(nrow(pd) > 0)
+      pd |>
+        dplyr::group_by(latitude, longitude, s_l) |>
+        dplyr::summarise(
+          total_abundance  = sum(total_abundance, na.rm = TRUE),
+          dominant_species = taxon[which.max(total_abundance)],
+          .groups          = "drop"
+        ) |>
+        dplyr::mutate(
+          size_scaled      = 4 + (total_abundance / max(total_abundance, na.rm = TRUE)) * 12,
+          dominant_display = pretty_taxon(dominant_species)
+        )
+    })
+
+    output$plot_subtitle <- shiny::renderText({
+      pd <- station_data()
+      glue::glue("{nrow(pd)} stations · {state$year_min}–{state$year_max}")
+    })
+
+    output$no_data_msg <- shiny::renderUI({
+      pd <- tryCatch(station_data(), error = function(e) NULL)
+      if (is.null(pd) || nrow(pd) == 0)
+        shiny::div(class = "no-data-msg", shiny::icon("circle-exclamation"),
+                   " No spatial data found. The database may not contain lat/lon for these records.")
+    })
+
+    output$map <- leaflet::renderLeaflet({
+      pd <- station_data(); shiny::req(nrow(pd) > 0)
+
+      base <- leaflet::leaflet(pd) |>
+        leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron)
+
+      if (input$map_mode == "line") {
+        pal <- leaflet::colorNumeric("viridis", domain = pd$s_l, na.color = "#808080")
+        base |>
+          leaflet::addCircleMarkers(
+            lng         = ~longitude,
+            lat         = ~latitude,
+            radius      = ~size_scaled,
+            fillColor   = ~pal(s_l),
+            color       = ~pal(s_l),
+            fillOpacity = 0.75,
+            stroke      = FALSE,
+            popup       = ~paste0(
+              "<b>CalCOFI Line:</b> ", round(s_l, 1), "<br>",
+              "<b>Total Abundance:</b> ",
+              formatC(total_abundance, format = "f", digits = 0, big.mark = ","), "<br>",
+              "<b>Dominant Species:</b> ", dominant_display
+            )
+          ) |>
+          leaflet::addLegend(position = "bottomright", pal = pal, values = ~s_l,
+                             title = "CalCOFI Line", opacity = 0.8)
+
+      } else {
+        top_sp <- names(sort(table(pd$dominant_display), decreasing = TRUE))[
+          1:min(8, length(unique(pd$dominant_display)))
+        ]
+        pd <- pd |>
+          dplyr::mutate(dom_grp = ifelse(dominant_display %in% top_sp,
+                                         dominant_display, "Other"))
+        all_grps <- sort(unique(pd$dom_grp))
+        n_grps   <- length(all_grps)
+        pal      <- leaflet::colorFactor(
+          palette = if (n_grps <= 8) RColorBrewer::brewer.pal(max(3, n_grps), "Set2")[seq_len(n_grps)]
+                    else grDevices::colorRampPalette(RColorBrewer::brewer.pal(8, "Set2"))(n_grps),
+          domain  = all_grps
+        )
+        base |>
+          leaflet::addCircleMarkers(
+            data        = pd,
+            lng         = ~longitude,
+            lat         = ~latitude,
+            radius      = ~size_scaled,
+            fillColor   = ~pal(dom_grp),
+            color       = ~pal(dom_grp),
+            fillOpacity = 0.75,
+            stroke      = FALSE,
+            popup       = ~paste0(
+              "<b>Dominant Species:</b> ", dom_grp, "<br>",
+              "<b>CalCOFI Line:</b> ", round(s_l, 1), "<br>",
+              "<b>Total Abundance:</b> ",
+              formatC(total_abundance, format = "f", digits = 0, big.mark = ",")
+            )
+          ) |>
+          leaflet::addLegend(position = "bottomright", pal = pal, values = pd$dom_grp,
+                             title = "Dominant Species", opacity = 0.8)
+      }
+    })
+
+    output$dl_data <- shiny::downloadHandler(
+      filename = function() paste0("spatial_data_", Sys.Date(), ".csv"),
+      content  = function(file) utils::write.csv(station_data(), file, row.names = FALSE)
+    )
+  })
+}

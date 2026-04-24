@@ -125,3 +125,79 @@ make_data_reactive <- function(config, session, initial_data = NULL) {
 
   result
 }
+
+# ── Temporal trends query ─────────────────────────────────────────────────────
+# Sums abundance across selected species per sampling station, then averages
+# those station totals by year + season — matching temporal_trends.r logic
+
+query_temporal_trends <- function(config, year_min, year_max, seasons, species) {
+  tryCatch({
+    db_path <- resolve_db_path(config)
+    con     <- get_con(db_path)
+    tbl     <- config$data$table
+
+    seasons_str <- paste0("'", seasons, "'", collapse = ", ")
+    species_str <- paste0("'", species, "'", collapse = ", ")
+
+    sql <- paste0(
+      "SELECT year, season, ",
+      "  AVG(station_total)    AS mean_abundance, ",
+      "  MEDIAN(station_total) AS median_abundance ",
+      "FROM ( ",
+      "  SELECT year, season, unique_code, SUM(abundance) AS station_total ",
+      "  FROM ", tbl, " ",
+      "  WHERE abundance IS NOT NULL ",
+      "    AND year    BETWEEN ", year_min, " AND ", year_max, " ",
+      "    AND season  IN (", seasons_str, ") ",
+      "    AND taxon   IN (", species_str, ") ",
+      "  GROUP BY year, season, unique_code ",
+      ") sub ",
+      "GROUP BY year, season ",
+      "ORDER BY year, season"
+    )
+
+    df <- DBI::dbGetQuery(con, sql)
+    df$year   <- as.integer(df$year)
+    df$season <- factor(df$season, levels = c("spring", "summer", "fall", "winter"))
+    df
+
+  }, error = function(e) {
+    message("query_temporal_trends error: ", conditionMessage(e))
+    data.frame(year = integer(), season = character(),
+               mean_abundance = numeric(), median_abundance = numeric())
+  })
+}
+
+# ── Spatial query ─────────────────────────────────────────────────────────────
+# Returns total abundance per station per taxon with lat/lon coordinates
+
+query_spatial <- function(config, year_min, year_max, seasons, species) {
+  tryCatch({
+    db_path <- resolve_db_path(config)
+    con     <- get_con(db_path)
+    tbl     <- config$data$table
+
+    seasons_str <- paste0("'", seasons, "'", collapse = ", ")
+    species_str <- paste0("'", species, "'", collapse = ", ")
+
+    sql <- paste0(
+      "SELECT latitude, longitude, s_l, taxon, SUM(abundance) AS total_abundance ",
+      "FROM ", tbl, " ",
+      "WHERE abundance  IS NOT NULL ",
+      "  AND latitude   IS NOT NULL ",
+      "  AND longitude  IS NOT NULL ",
+      "  AND year   BETWEEN ", year_min, " AND ", year_max, " ",
+      "  AND season IN (", seasons_str, ") ",
+      "  AND taxon  IN (", species_str, ") ",
+      "GROUP BY latitude, longitude, s_l, taxon ",
+      "ORDER BY latitude, longitude"
+    )
+
+    DBI::dbGetQuery(con, sql)
+
+  }, error = function(e) {
+    message("query_spatial error: ", conditionMessage(e))
+    data.frame(latitude = numeric(), longitude = numeric(),
+               s_l = numeric(), taxon = character(), total_abundance = numeric())
+  })
+}

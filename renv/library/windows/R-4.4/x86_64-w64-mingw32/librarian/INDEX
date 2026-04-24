@@ -1,0 +1,30 @@
+browse_cran             Search for CRAN packages by keyword/regex
+check_attached          Check if packages are attached
+check_installed         Check if packages are installed
+check_pkg_status        Check if packages are installed or attached
+collapse_vec            Collapse a vector
+dots1_is_pkglist        Is the 1st 'dots' arg a character vector with
+                        length > 1?
+dots_is_empty           Did the user pass arguments inside dots?
+dots_length             How many items are in dots?
+fuzzy_needle            Turn a list of words into a fuzzy regex
+is_valid_url            Assert that a URL is complete and valid
+lib_paths               Changing and viewing the package search paths
+lib_startup             Set packages and library paths to automatically
+                        start-up with R
+list_dependencies       List the dependencies of selected packages
+make_dirs               Build a path, creating subfolders if needed
+nse_dots                Convert dots to package names
+reshelf                 Detach and then reattach packages to the search
+                        path
+sentence                Keep the first sentence of a string.
+shelf                   Attach packages to the search path, installing
+                        them from CRAN, GitHub, or Bioconductor if
+                        needed
+shhh                    Suppresses console output, including printing
+stock                   Install packages from CRAN, GitHub, or
+                        Bioconductor if needed/wanted
+tell_user               Messages for the user
+unshelf                 Detach (unload) packages from the search path
+wrap_text               Produce a nicely-wrapped paragraph for console
+                        printing
