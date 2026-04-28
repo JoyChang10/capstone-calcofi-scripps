@@ -20,12 +20,13 @@ grViz("
           style = 'filled, rounded', 
           fontname = 'Helvetica', 
           fontsize = 11,
-          color = '#cccccc',
+          color = '#4A4A4A',
           margin = 0.2]
           
     # Global edge settings
     edge [fontname = 'Helvetica', 
-          fontsize = 10]
+          fontsize = 10,
+          color = '#333333']
 
     # --- CLUSTER 1: INPUTS ---
     subgraph cluster_inputs {
