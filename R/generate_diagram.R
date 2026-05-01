@@ -1,8 +1,8 @@
-# Load the library
-# install.packages("DiagrammeR")
 library(DiagrammeR)
+library(DiagrammeRsvg)
+library(rsvg)
 
-grViz("
+diagram <- grViz("
   digraph functional_pipeline {
     # 1. Global Settings
     graph [layout = dot, 
@@ -49,8 +49,8 @@ grViz("
       fontname = 'Helvetica';
       ingest [label = 'Generalized Ingest\\n(Date/Null Parsing)', fillcolor = '#D1FFD1']
       { rank = same; pivot; taxon; }
-      pivot [label = 'Negative Selection Pivot\\n(Dynamic Columns)', fillcolor = '#D1FFD1']
-      taxon [label = 'Taxonomic Enrichment\\n(Fallback Logic)', fillcolor = '#D1FFD1']
+      pivot [label = 'Dynamic Column Pivot\\n(Wide to Long)', fillcolor = '#D1FFD1']
+      taxon [label = 'Taxonomic Mapping\\n(Fallback Logic)', fillcolor = '#D1FFD1']
     }
 
     # --- CLUSTER 3: QUALITY & DB ---
@@ -62,8 +62,8 @@ grViz("
       penwidth = 0.5;
       fontname = 'Helvetica';
       { rank = same; validate; duckdb; }
-      validate [label = 'Parameterized Validation\\n(Config Constraints)', fillcolor = '#FFF2CC']
-      duckdb [label = 'DuckDB Instance\\n(WGS84 Projection)', fillcolor = '#FFF2CC']
+      validate [label = 'Data Validation\\n(Config Constraints)', fillcolor = '#FFF2CC']
+      duckdb [label = 'DuckDB Instance', fillcolor = '#FFF2CC']
     }
 
     # --- CLUSTER 4: CLOUD & OPS ---
@@ -76,7 +76,7 @@ grViz("
       { rank = same; parquet; gcs; actions; }
       parquet [label = 'Parquet Export\\n(Versioning)', fillcolor = '#F8CECC']
       gcs [label = 'GCS Data Lake\\n(Cloud Storage)', fillcolor = '#F8CECC']
-      actions [label = 'GitHub Actions\\n(Weekly Cron)', fillcolor = '#F8CECC']
+      actions [label = 'GitHub Actions\\n(Weekly Sync)', fillcolor = '#F8CECC']
     }
 
     # --- BRANCHED FLOW ---
@@ -86,9 +86,22 @@ grViz("
     taxon -> validate
     validate -> duckdb
     duckdb -> parquet
-    parquet -> gcs
     
     actions -> config [label = 'Iterates', style = dashed]
     gcs -> actions [style = dotted, dir = back]
   }
 ")
+
+svg_content <- export_svg(diagram)
+img_path <- file.path(dirname(getwd()), "img")
+dir.create(img_path, showWarnings = TRUE, recursive = TRUE)
+
+# 3. Check SVG content was captured
+nchar(svg_content)  # should be a large number, not 0
+
+# 4. Save with full absolute path
+out_file <- file.path(img_path, "pipeline_diagram.png")
+rsvg_png(tmp, out_file, width = 1400)
+
+# 5. Confirm file exists
+file.exists(out_file)
