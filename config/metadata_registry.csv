@@ -1,0 +1,9 @@
+dataset_name,table_name,column_name,long_name,unit,data_type,description
+example_dataset,example_table,latitude,Latitude,decimal degrees,double,"Sampling latitude in WGS84 coordinates"
+example_dataset,example_table,longitude,Longitude,decimal degrees,double,"Sampling longitude in WGS84 coordinates"
+example_dataset,example_table,year,Year,year,integer,"Sampling year"
+example_dataset,example_table,season,Season,season,string,"Sampling season"
+example_dataset,example_table,taxon_code,Taxonomic Code,code,string,"Pre-existing taxonomy code such as ITIS TSN or CalCOFI species code"
+example_dataset,example_table,taxon,Taxon Name,none,string,"Scientific or standardized taxon name"
+example_dataset,example_table,abundance,Abundance,count,double,"Observed abundance measurement"
+example_dataset,example_table,itis_tsn,ITIS Taxonomic Serial Number,code,string,"ITIS TSN used for taxonomic cross-reference"
