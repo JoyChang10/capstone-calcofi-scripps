@@ -43,7 +43,7 @@ jobs:
             echo "Running pipeline with config: $config"
             echo "======================================"
 
-            Rscript scripts/generalized_ingest.R --config "$config"
+            Rscript R/generalized_ingest.R --config "$config"
 
             echo "Finished pipeline for: $config"
           done
