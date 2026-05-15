@@ -98,7 +98,7 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
                               shiny::p("Reference table of all species and their associated habitat classifications.",
                                        style = "margin: 0; font-size: 0.85em; color: #8bafc8;")
                             ),
-                            shiny::dataTableOutput("habitat_ref_table")
+                            DT::DTOutput("habitat_ref_table")
                           )
           )
         )

@@ -12,6 +12,7 @@ library(yaml)
 library(tools)
 library(dplyr)
 library(leaflet)
+library(DT)
 
 source("R/data.R")
 source("R/state.R")
@@ -133,7 +134,7 @@ server <- function(input, output, session) {
     else                       shiny::span(class = "badge-ok",      "● Live")
   })
   
-  output$habitat_ref_table <- shiny::renderDataTable({
+  output$habitat_ref_table <- DT::renderDT({
     df <- habitat_lookup |>
       dplyr::transmute(
         Species  = tools::toTitleCase(gsub("\\.", " ", species)),
@@ -142,12 +143,16 @@ server <- function(input, output, session) {
         Region   = tools::toTitleCase(Regionname)
       ) |>
       dplyr::arrange(Habitat, Group, Species)
-    df
-  }, options = list(
-    pageLength = 25,
-    order      = list(list(0, "asc")),
-    columnDefs = list(list(className = "dt-center", targets = c(1, 2, 3)))
-  ), rownames = FALSE, class = "display compact")
+    DT::datatable(df,
+      rownames  = FALSE,
+      class     = "display compact",
+      options   = list(
+        pageLength = 25,
+        order      = list(list(0, "asc")),
+        columnDefs = list(list(className = "dt-center", targets = c(1, 2, 3)))
+      )
+    )
+  })
 
   exportsServer("exports", filtered_data, state, config, habitat_lookup)
   abundanceTimeServer("abundance_time", filtered_data, state, config, habitat_lookup)
