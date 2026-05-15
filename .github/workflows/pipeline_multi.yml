@@ -2,6 +2,9 @@ name: Multi-Dataset Pipeline
 
 on:
   workflow_dispatch:
+  schedule:
+    # Executes daily at midnight UTC. Adjust the cron expression as necessary.
+    - cron: '0 0 * * *'
 
 jobs:
   run-multi-dataset-pipeline:
@@ -26,7 +29,8 @@ jobs:
             "lubridate",
             "glue",
             "janitor",
-            "optparse"
+            "optparse",
+            "googleCloudStorageR"
           ), repos = "https://cloud.r-project.org")'
 
       - name: List available config files
@@ -35,6 +39,10 @@ jobs:
           ls -lh config/*.yaml
 
       - name: Run generalized pipeline for each config
+        env:
+          # Passes the authentication secret to the R environment.
+          # Ensure GCS_AUTH_FILE is saved in your repository's Secrets.
+          GCS_AUTH_FILE: ${{ secrets.GCS_AUTH_FILE }}
         run: |
           set -e
 
