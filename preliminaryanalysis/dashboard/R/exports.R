@@ -22,7 +22,7 @@ exportsUI <- function(id) {
 
 # ── Server Component ──────────────────────────────────────────────────────────
 
-exportsServer <- function(id, filtered_data, state, config) {
+exportsServer <- function(id, filtered_data, state, config, habitat_lookup = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
 
     # Full filtered CSV
@@ -63,69 +63,66 @@ exportsServer <- function(id, filtered_data, state, config) {
 
     # PDF report
     output$dl_pdf <- shiny::downloadHandler(
-      filename = function() paste0("ichthyo_report_", Sys.Date(), ".pdf"),
+      filename = function() paste0("calcofi_report_", Sys.Date(), ".pdf"),
       content  = function(file) {
-        df <- filtered_data()
-        shiny::req(!is.null(df) && nrow(df) > 0)
-
-        fn <- switch(state$aggregation,
-          "mean"   = mean,   "median" = median,
-          "sum"    = sum,    "max"    = max, mean
-        )
-
-        pd <- stats::aggregate(
-          abundance ~ year + taxon,
-          data = df, FUN = fn, na.rm = TRUE
-        )
-        pd$taxon_display <- tools::toTitleCase(gsub("_", " ", pd$taxon))
+        plots <- build_all_ggplots(state, config, habitat_lookup)
 
         grDevices::pdf(file, width = 11, height = 8.5)
 
-        # Title page info
+        # Title page
         graphics::plot.new()
-        graphics::text(0.5, 0.9,  "Ichthyoplankton Abundance Dashboard",
-                       cex = 1.8, font = 2, adj = 0.5)
-        graphics::text(0.5, 0.82, paste("Report generated:", format(Sys.time(), "%Y-%m-%d %H:%M")),
-                       cex = 1,   adj = 0.5)
-        graphics::text(0.5, 0.74, paste("Year range:", state$year_min, "–", state$year_max),
-                       cex = 1,   adj = 0.5)
-        graphics::text(0.5, 0.68, paste("Seasons:", paste(state$selected_seasons, collapse = ", ")),
-                       cex = 1,   adj = 0.5)
-        graphics::text(0.5, 0.62, paste("Species:", length(state$selected_species)),
-                       cex = 1,   adj = 0.5)
-        graphics::text(0.5, 0.56, paste("Aggregation:", state$aggregation),
-                       cex = 1,   adj = 0.5)
+        graphics::text(0.5, 0.88, "CalCOFI Ichthyoplankton Dashboard",
+                       cex = 2, font = 2, adj = 0.5)
+        graphics::text(0.5, 0.78, paste("Generated:", format(Sys.time(), "%Y-%m-%d %H:%M")),
+                       cex = 1.1, adj = 0.5, col = "#444444")
+        graphics::text(0.5, 0.68, paste("Year range:", state$year_min, "–", state$year_max),
+                       cex = 1, adj = 0.5)
+        graphics::text(0.5, 0.61, paste("Seasons:", paste(tools::toTitleCase(state$selected_seasons), collapse = ", ")),
+                       cex = 1, adj = 0.5)
+        graphics::text(0.5, 0.54, paste("Species selected:", length(state$selected_species)),
+                       cex = 1, adj = 0.5)
+        graphics::text(0.5, 0.47, paste("Aggregation:", tools::toTitleCase(state$aggregation)),
+                       cex = 1, adj = 0.5)
+        graphics::text(0.5, 0.34, paste("Plots included:", length(plots)),
+                       cex = 0.95, adj = 0.5, col = "#666666")
+        graphics::text(0.5, 0.27, "Spatial Distribution map included on final page (requires Chrome).",
+                       cex = 0.9, adj = 0.5, col = "#888888", font = 3)
 
-        # Abundance plot
-        sp_list <- sort(unique(pd$taxon))
-        colours <- grDevices::colorRampPalette(
-          RColorBrewer::brewer.pal(min(8, length(sp_list)), "Set2")
-        )(length(sp_list))
+        # One ggplot per page
+        for (p in plots) print(p)
 
-        graphics::plot.new()
-        graphics::plot.window(
-          xlim = range(pd$year),
-          ylim = c(0, max(pd$abundance, na.rm = TRUE) * 1.1)
-        )
-        graphics::axis(1); graphics::axis(2, las = 1)
-        graphics::title(
-          main = "Abundance Through Time",
-          xlab = "Year",
-          ylab = paste(tools::toTitleCase(state$aggregation), "Abundance")
-        )
-        graphics::box()
-
-        for (i in seq_along(sp_list)) {
-          sub <- pd[pd$taxon == sp_list[i], ]
-          sub <- sub[order(sub$year), ]
-          graphics::lines(sub$year, sub$abundance, col = colours[i], lwd = 2)
-          graphics::points(sub$year, sub$abundance, col = colours[i], pch = 19, cex = 0.7)
+        # Spatial map page via webshot2
+        map_widget <- tryCatch(build_spatial_leaflet(state, config), error = function(e) NULL)
+        if (!is.null(map_widget)) {
+          tmp_html <- tempfile(fileext = ".html")
+          tmp_png  <- tempfile(fileext = ".png")
+          tryCatch({
+            htmlwidgets::saveWidget(map_widget, tmp_html, selfcontained = TRUE)
+            webshot2::webshot(tmp_html, tmp_png, vwidth = 1100, vheight = 850, delay = 2)
+            if (file.exists(tmp_png)) {
+              img <- png::readPNG(tmp_png)
+              grid::grid.newpage()
+              grid::pushViewport(grid::viewport(
+                layout = grid::grid.layout(2, 1, heights = grid::unit(c(0.07, 0.93), "npc"))
+              ))
+              grid::pushViewport(grid::viewport(layout.pos.row = 1))
+              grid::grid.text("Spatial Distribution",
+                              gp = grid::gpar(fontsize = 15, fontface = "bold"))
+              grid::popViewport()
+              grid::pushViewport(grid::viewport(layout.pos.row = 2))
+              grid::grid.raster(img, width = 1, height = 1)
+              grid::popViewport()
+            }
+          }, error = function(e) {
+            grid::grid.newpage()
+            grid::grid.text(
+              paste0("Spatial Distribution map could not be generated.\n",
+                     "Chrome must be installed and accessible to capture this plot.\n\n",
+                     "Error: ", conditionMessage(e)),
+              gp = grid::gpar(fontsize = 12, col = "#666666"), just = "centre"
+            )
+          })
         }
-        graphics::legend("topright",
-          legend = tools::toTitleCase(gsub("_", " ", sp_list)),
-          col    = colours, lwd = 2, pch = 19, cex = 0.75,
-          bty    = "n"
-        )
 
         grDevices::dev.off()
       }

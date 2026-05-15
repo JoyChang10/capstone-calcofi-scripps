@@ -133,13 +133,13 @@ server <- function(input, output, session) {
     else                       shiny::span(class = "badge-ok",      "● Live")
   })
   
+  exportsServer("exports", filtered_data, state, config, habitat_lookup)
   abundanceTimeServer("abundance_time", filtered_data, state, config, habitat_lookup)
   corrHeatmapServer("corr_heatmap",     filtered_data, state, config, habitat_lookup)
   meanVarServer("mean_var",             filtered_data, state, config, habitat_lookup)
   abundanceBarServer("abundance_bar",   filtered_data, state, config, habitat_lookup)
   temporalTrendsServer("temporal_trends",          state, config)
-  timeSeriesServer("time_series",                  state, config)
-  habitatTimeSeriesServer("habitat_time_series",   state, config, habitat_lookup)
+  timeSeriesServer("time_series",                  state, config, habitat_lookup)
   spatialMapServer("spatial_map",                  state, config)
 }
 

@@ -44,7 +44,14 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
               shiny::textOutput("record_count", inline = TRUE)
             )
           ),
-          shiny::uiOutput("filter_ui")
+          shiny::uiOutput("filter_ui"),
+          shiny::hr(),
+          exportsUI("exports"),
+          shiny::p(
+            shiny::icon("circle-info", style = "font-size: 0.75em;"),
+            " Chrome must be installed to include the Spatial Distribution map in PDF exports.",
+            style = "font-size: 0.72em; color: #999; font-style: italic; margin-top: 4px; line-height: 1.4;"
+          )
         )
       ),
 
@@ -75,10 +82,6 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
           shiny::tabPanel("Time Series by Period",
                           shiny::br(),
                           timeSeriesUI("time_series")
-          ),
-          shiny::tabPanel("Habitat Time Series",
-                          shiny::br(),
-                          habitatTimeSeriesUI("habitat_time_series")
           ),
           shiny::tabPanel("Spatial Distribution",
                           shiny::br(),

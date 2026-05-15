@@ -840,7 +840,7 @@ temporalTrendsServer <- function(id, state, config) {
   })
 }
 
-# ── Plot 6: Time Series by Historical Period ──────────────────────────────────
+# ── Plot 6: Time Series by Historical Period (Species or Habitat) ─────────────
 
 timeSeriesUI <- function(id) {
   ns <- shiny::NS(id)
@@ -859,6 +859,12 @@ timeSeriesUI <- function(id) {
                                 class = "btn-icon", title = "Download data")
         )
       ),
+      shiny::div(
+        class = "plot-controls-inline",
+        shiny::radioButtons(ns("view_by"), label = "View by:",
+                            choices  = c("Species" = "species", "Habitat" = "habitat"),
+                            selected = "species", inline = TRUE)
+      ),
       shiny::div(class = "plot-subtitle", shiny::textOutput(ns("plot_subtitle"), inline = TRUE))
     ),
     shiny::div(
@@ -870,8 +876,10 @@ timeSeriesUI <- function(id) {
   )
 }
 
-timeSeriesServer <- function(id, state, config) {
+timeSeriesServer <- function(id, state, config, habitat_lookup = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
+
+    period_order <- c("1951–1976", "1977–1998", "1999–2014", "2015–present")
 
     plot_data <- shiny::reactive({
       shiny::req(length(state$selected_species) > 0, length(state$selected_seasons) > 0)
@@ -886,6 +894,21 @@ timeSeriesServer <- function(id, state, config) {
       )
       shiny::req(nrow(pd) > 0)
 
+      if (input$view_by == "habitat") {
+        shiny::req(!is.null(habitat_lookup))
+        pd <- pd |>
+          dplyr::left_join(
+            habitat_lookup |> dplyr::select(species_clean, habitat),
+            by = c("taxon" = "species_clean")
+          ) |>
+          dplyr::filter(!is.na(habitat)) |>
+          dplyr::group_by(year, habitat) |>
+          dplyr::summarise(abundance = mean(abundance, na.rm = TRUE), .groups = "drop") |>
+          dplyr::mutate(group_label = tools::toTitleCase(trimws(habitat)))
+      } else {
+        pd <- pd |> dplyr::mutate(group_label = taxon_display)
+      }
+
       pd |>
         dplyr::mutate(period = dplyr::case_when(
           year >= 1951 & year <= 1976 ~ "1951–1976",
@@ -899,45 +922,56 @@ timeSeriesServer <- function(id, state, config) {
 
     output$plot_subtitle <- shiny::renderText({
       pd <- plot_data()
-      sp <- length(unique(pd$taxon_display))
-      glue::glue("{sp} species · {state$year_min}–{state$year_max} · {agg_label(state$aggregation)} faceted by period")
+      n  <- length(unique(pd$group_label))
+      label <- if (input$view_by == "habitat") "habitat types" else "species"
+      y_label <- if (input$view_by == "habitat") "Mean Abundance" else agg_label(state$aggregation)
+      glue::glue("{n} {label} · {state$year_min}–{state$year_max} · {y_label} faceted by period")
     })
 
     output$no_data_msg <- shiny::renderUI({
       pd <- tryCatch(plot_data(), error = function(e) NULL)
-      if (is.null(pd) || nrow(pd) == 0)
-        shiny::div(class = "no-data-msg", shiny::icon("circle-exclamation"),
-                   " No data matches the current filters.")
+      if (is.null(pd) || nrow(pd) == 0) {
+        msg <- if (!is.null(input$view_by) && input$view_by == "habitat")
+          " No habitat data available. Check that selected species have habitat assignments."
+        else
+          " No data matches the current filters."
+        shiny::div(class = "no-data-msg", shiny::icon("circle-exclamation"), msg)
+      }
     })
 
     output$plot <- plotly::renderPlotly({
       pd <- plot_data(); shiny::req(nrow(pd) > 0)
+      pd$period <- factor(pd$period, levels = period_order)
 
-      period_order <- c("1951–1976", "1977–1998", "1999–2014", "2015–present")
-      pd$period    <- factor(pd$period, levels = period_order)
+      y_label <- if (input$view_by == "habitat") "Mean Abundance" else agg_label(state$aggregation)
 
-      pal         <- make_species_palette(sort(unique(pd$taxon)), config$plots$abundance_time$color_palette)
-      pal_display <- stats::setNames(pal, sort(unique(pd$taxon_display)))
+      if (input$view_by == "habitat") {
+        habitat_colors <- c(Pelagic = "#2E86AB", Benthic = "#E84855",
+                            "Coastal-Oceanic" = "#F9A825", Other = "#888888")
+        color_scale <- ggplot2::scale_color_manual(values = habitat_colors, name = "Habitat")
+      } else {
+        pal         <- make_species_palette(sort(unique(pd$group_label)), config$plots$abundance_time$color_palette)
+        color_scale <- ggplot2::scale_color_manual(values = pal, name = "Species")
+      }
 
       p <- ggplot2::ggplot(pd, ggplot2::aes(
         x     = year,
         y     = abundance,
-        color = taxon_display,
-        group = taxon_display,
+        color = group_label,
+        group = group_label,
         text  = paste0(
-          "<b>", taxon_display, "</b><br>",
+          "<b>", group_label, "</b><br>",
           "Year: ", year, "<br>",
-          agg_label(state$aggregation), ": ",
-          formatC(abundance, format = "f", digits = 1, big.mark = ",")
+          y_label, ": ", formatC(abundance, format = "f", digits = 1, big.mark = ",")
         )
       )) +
         ggplot2::geom_line(linewidth = 0.9, alpha = 0.85) +
         ggplot2::geom_point(size = 1.8, alpha = 0.9) +
         ggplot2::facet_wrap(~ period, scales = "free_x") +
-        ggplot2::scale_color_manual(values = pal_display, name = "Species") +
+        color_scale +
         ggplot2::scale_y_continuous(labels = scales::label_comma(),
                                     expand = ggplot2::expansion(mult = c(0.02, 0.08))) +
-        ggplot2::labs(x = "Year", y = agg_label(state$aggregation)) +
+        ggplot2::labs(x = "Year", y = y_label) +
         ggplot2::theme_minimal(base_size = 12) +
         ggplot2::theme(
           panel.grid.minor   = ggplot2::element_blank(),
@@ -969,17 +1003,24 @@ timeSeriesServer <- function(id, state, config) {
       filename = function() paste0("time_series_period_", Sys.Date(), ".png"),
       content  = function(file) {
         pd <- plot_data(); shiny::req(nrow(pd) > 0)
-        pal         <- make_species_palette(sort(unique(pd$taxon)), config$plots$abundance_time$color_palette)
-        pal_display <- stats::setNames(pal, sort(unique(pd$taxon_display)))
-        pd$period   <- factor(pd$period, levels = c("1951–1976", "1977–1998",
-                                                      "1999–2014", "2015–present"))
+        pd$period   <- factor(pd$period, levels = period_order)
+        y_label     <- if (input$view_by == "habitat") "Mean Abundance" else agg_label(state$aggregation)
+        plot_title  <- if (input$view_by == "habitat") "Habitat Time Series by Period" else "Time Series by Period"
+        if (input$view_by == "habitat") {
+          habitat_colors <- c(Pelagic = "#2E86AB", Benthic = "#E84855",
+                              "Coastal-Oceanic" = "#F9A825", Other = "#888888")
+          color_scale <- ggplot2::scale_color_manual(values = habitat_colors, name = "Habitat")
+        } else {
+          pal         <- make_species_palette(sort(unique(pd$group_label)), config$plots$abundance_time$color_palette)
+          color_scale <- ggplot2::scale_color_manual(values = pal, name = "Species")
+        }
         p <- ggplot2::ggplot(pd, ggplot2::aes(x = year, y = abundance,
-                                               color = taxon_display, group = taxon_display)) +
+                                               color = group_label, group = group_label)) +
           ggplot2::geom_line(linewidth = 1) + ggplot2::geom_point(size = 2) +
           ggplot2::facet_wrap(~ period, scales = "free_x") +
-          ggplot2::scale_color_manual(values = pal_display, name = "Species") +
+          color_scale +
           ggplot2::scale_y_continuous(labels = scales::label_comma()) +
-          ggplot2::labs(title = "Time Series by Period", x = "Year", y = agg_label(state$aggregation)) +
+          ggplot2::labs(title = plot_title, x = "Year", y = y_label) +
           ggplot2::theme_minimal(base_size = 14) +
           ggplot2::theme(strip.text = ggplot2::element_text(face = "bold"))
         ggplot2::ggsave(file, p, width = 14, height = 7, dpi = 150, bg = "white")
@@ -988,168 +1029,6 @@ timeSeriesServer <- function(id, state, config) {
 
     output$dl_data <- shiny::downloadHandler(
       filename = function() paste0("time_series_period_", Sys.Date(), ".csv"),
-      content  = function(file) utils::write.csv(plot_data(), file, row.names = FALSE)
-    )
-  })
-}
-
-# ── Plot 7: Habitat Time Series by Period ─────────────────────────────────────
-
-habitatTimeSeriesUI <- function(id) {
-  ns <- shiny::NS(id)
-  shiny::div(
-    class = "plot-card",
-    shiny::div(
-      class = "plot-header",
-      shiny::div(
-        class = "plot-title-row",
-        shiny::h3("Habitat Time Series by Period", class = "plot-title"),
-        shiny::div(
-          class = "plot-controls-inline",
-          shiny::downloadButton(ns("dl_plot"), "", icon = shiny::icon("download"),
-                                class = "btn-icon", title = "Download plot"),
-          shiny::downloadButton(ns("dl_data"), "", icon = shiny::icon("table"),
-                                class = "btn-icon", title = "Download data")
-        )
-      ),
-      shiny::div(class = "plot-subtitle", shiny::textOutput(ns("plot_subtitle"), inline = TRUE))
-    ),
-    shiny::div(
-      class = "plot-body",
-      plotly::plotlyOutput(ns("plot"), height = "460px") |>
-        shinycssloaders::withSpinner(type = 6, color = "#2E86AB", size = 0.6)
-    ),
-    shiny::div(class = "plot-footer", shiny::uiOutput(ns("no_data_msg")))
-  )
-}
-
-habitatTimeSeriesServer <- function(id, state, config, habitat_lookup) {
-  shiny::moduleServer(id, function(input, output, session) {
-
-    plot_data <- shiny::reactive({
-      shiny::req(length(state$selected_species) > 0, length(state$selected_seasons) > 0)
-
-      pd <- query_aggregated(
-        config,
-        year_min   = state$year_min,
-        year_max   = state$year_max,
-        seasons    = state$selected_seasons,
-        species    = state$selected_species,
-        agg_method = "mean"
-      )
-      shiny::req(nrow(pd) > 0)
-
-      pd |>
-        dplyr::left_join(
-          habitat_lookup |> dplyr::select(species_clean, habitat),
-          by = c("taxon" = "species_clean")
-        ) |>
-        dplyr::filter(!is.na(habitat)) |>
-        dplyr::group_by(year, habitat) |>
-        dplyr::summarise(mean_abundance = mean(abundance, na.rm = TRUE), .groups = "drop") |>
-        dplyr::mutate(
-          habitat = tools::toTitleCase(trimws(habitat)),
-          period  = dplyr::case_when(
-            year >= 1951 & year <= 1976 ~ "1951–1976",
-            year >  1976 & year <= 1998 ~ "1977–1998",
-            year >  1998 & year <= 2014 ~ "1999–2014",
-            year >  2014               ~ "2015–present",
-            TRUE ~ NA_character_
-          )
-        ) |>
-        dplyr::filter(!is.na(period), period %in% state$selected_periods)
-    })
-
-    output$plot_subtitle <- shiny::renderText({
-      pd <- plot_data()
-      hab <- length(unique(pd$habitat))
-      glue::glue("{hab} habitat types · {state$year_min}–{state$year_max} · Mean abundance by habitat and period")
-    })
-
-    output$no_data_msg <- shiny::renderUI({
-      pd <- tryCatch(plot_data(), error = function(e) NULL)
-      if (is.null(pd) || nrow(pd) == 0)
-        shiny::div(class = "no-data-msg", shiny::icon("circle-exclamation"),
-                   " No habitat data available. Check that selected species have habitat assignments.")
-    })
-
-    output$plot <- plotly::renderPlotly({
-      pd <- plot_data(); shiny::req(nrow(pd) > 0)
-
-      period_order <- c("1951–1976", "1977–1998", "1999–2014", "2015–present")
-      pd$period    <- factor(pd$period, levels = period_order)
-
-      habitat_colors <- c(Pelagic = "#2E86AB", Benthic = "#E84855",
-                          "Coastal-Oceanic" = "#F9A825", Other = "#888888")
-
-      p <- ggplot2::ggplot(pd, ggplot2::aes(
-        x     = year,
-        y     = mean_abundance,
-        color = habitat,
-        group = habitat,
-        text  = paste0(
-          "<b>", habitat, "</b><br>",
-          "Year: ", year, "<br>",
-          "Mean Abundance: ", formatC(mean_abundance, format = "f", digits = 1, big.mark = ",")
-        )
-      )) +
-        ggplot2::geom_line(linewidth = 0.9, alpha = 0.85) +
-        ggplot2::geom_point(size = 1.8, alpha = 0.9) +
-        ggplot2::facet_wrap(~ period, scales = "free_x") +
-        ggplot2::scale_color_manual(values = habitat_colors, name = "Habitat") +
-        ggplot2::scale_y_continuous(labels = scales::label_comma(),
-                                    expand = ggplot2::expansion(mult = c(0.02, 0.08))) +
-        ggplot2::labs(x = "Year", y = "Mean Abundance") +
-        ggplot2::theme_minimal(base_size = 12) +
-        ggplot2::theme(
-          panel.grid.minor   = ggplot2::element_blank(),
-          panel.grid.major.x = ggplot2::element_blank(),
-          strip.text         = ggplot2::element_text(size = 11, face = "bold"),
-          axis.title         = ggplot2::element_text(size = 11, color = "#555"),
-          legend.title       = ggplot2::element_text(size = 11, face = "bold"),
-          legend.text        = ggplot2::element_text(size = 10),
-          plot.background    = ggplot2::element_rect(fill = "transparent", color = NA),
-          panel.background   = ggplot2::element_rect(fill = "transparent", color = NA)
-        )
-
-      plotly::ggplotly(p, tooltip = "text") |>
-        plotly::layout(
-          legend = list(orientation = "v", x = 1.02, y = 0.98,
-                        bgcolor = "rgba(255,255,255,0.85)", bordercolor = "#ddd", borderwidth = 1),
-          margin = list(l = 60, r = 160, t = 20, b = 60),
-          paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)"
-        ) |>
-        plotly::config(
-          displayModeBar = TRUE,
-          modeBarButtonsToRemove = c("lasso2d", "select2d", "autoScale2d"),
-          toImageButtonOptions = list(format = "png", filename = "habitat_time_series",
-                                      width = 1400, height = 700)
-        )
-    })
-
-    output$dl_plot <- shiny::downloadHandler(
-      filename = function() paste0("habitat_time_series_", Sys.Date(), ".png"),
-      content  = function(file) {
-        pd <- plot_data(); shiny::req(nrow(pd) > 0)
-        pd$period <- factor(pd$period, levels = c("1951–1976", "1977–1998",
-                                                    "1999–2014", "2015–present"))
-        habitat_colors <- c(Pelagic = "#2E86AB", Benthic = "#E84855",
-                            "Coastal-Oceanic" = "#F9A825", Other = "#888888")
-        p <- ggplot2::ggplot(pd, ggplot2::aes(x = year, y = mean_abundance,
-                                               color = habitat, group = habitat)) +
-          ggplot2::geom_line(linewidth = 1) + ggplot2::geom_point(size = 2) +
-          ggplot2::facet_wrap(~ period, scales = "free_x") +
-          ggplot2::scale_color_manual(values = habitat_colors, name = "Habitat") +
-          ggplot2::scale_y_continuous(labels = scales::label_comma()) +
-          ggplot2::labs(title = "Habitat Time Series by Period", x = "Year", y = "Mean Abundance") +
-          ggplot2::theme_minimal(base_size = 14) +
-          ggplot2::theme(strip.text = ggplot2::element_text(face = "bold"))
-        ggplot2::ggsave(file, p, width = 14, height = 7, dpi = 150, bg = "white")
-      }
-    )
-
-    output$dl_data <- shiny::downloadHandler(
-      filename = function() paste0("habitat_time_series_", Sys.Date(), ".csv"),
       content  = function(file) utils::write.csv(plot_data(), file, row.names = FALSE)
     )
   })
@@ -1298,4 +1177,243 @@ spatialMapServer <- function(id, state, config) {
       content  = function(file) utils::write.csv(station_data(), file, row.names = FALSE)
     )
   })
+}
+
+# ── PDF Export: build Leaflet map for webshot capture ────────────────────────
+# Returns a leaflet widget (CalCOFI Line colouring) or NULL if no data.
+
+build_spatial_leaflet <- function(state, config) {
+  pd <- tryCatch(query_spatial(
+    config,
+    year_min = state$year_min,
+    year_max = state$year_max,
+    seasons  = state$selected_seasons,
+    species  = state$selected_species
+  ), error = function(e) NULL)
+
+  if (is.null(pd) || nrow(pd) == 0) return(NULL)
+
+  station_data <- pd |>
+    dplyr::group_by(latitude, longitude, s_l) |>
+    dplyr::summarise(
+      total_abundance  = sum(total_abundance, na.rm = TRUE),
+      dominant_species = taxon[which.max(total_abundance)],
+      .groups          = "drop"
+    ) |>
+    dplyr::mutate(
+      size_scaled      = 4 + (total_abundance / max(total_abundance, na.rm = TRUE)) * 12,
+      dominant_display = pretty_taxon(dominant_species)
+    )
+
+  pal <- leaflet::colorNumeric("viridis", domain = station_data$s_l, na.color = "#808080")
+
+  leaflet::leaflet(station_data) |>
+    leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+    leaflet::addCircleMarkers(
+      lng         = ~longitude,
+      lat         = ~latitude,
+      radius      = ~size_scaled,
+      fillColor   = ~pal(s_l),
+      color       = ~pal(s_l),
+      fillOpacity = 0.75,
+      stroke      = FALSE,
+      popup       = ~paste0(
+        "<b>CalCOFI Line:</b> ", round(s_l, 1), "<br>",
+        "<b>Total Abundance:</b> ",
+        formatC(total_abundance, format = "f", digits = 0, big.mark = ","), "<br>",
+        "<b>Dominant Species:</b> ", dominant_display
+      )
+    ) |>
+    leaflet::addLegend(position = "bottomright", pal = pal, values = ~s_l,
+                       title = "CalCOFI Line", opacity = 0.8)
+}
+
+# ── PDF Export: build all static ggplot2 objects ──────────────────────────────
+# Returns a named list of ggplots (one per page in the PDF report).
+# Skips the spatial map (Leaflet, not PDF-renderable).
+
+build_all_ggplots <- function(state, config, habitat_lookup = NULL) {
+  plots <- list()
+  pal_name <- config$plots$abundance_time$color_palette
+  period_order <- c("1951–1976", "1977–1998", "1999–2014", "2015–present")
+
+  # ── 1. Abundance Through Time ───────────────────────────────────────────────
+  pd1 <- tryCatch(query_aggregated(
+    config,
+    year_min   = state$year_min, year_max = state$year_max,
+    seasons    = state$selected_seasons, species = state$selected_species,
+    agg_method = state$aggregation
+  ), error = function(e) NULL)
+
+  if (!is.null(pd1) && nrow(pd1) > 0) {
+    pal <- make_species_palette(sort(unique(pd1$taxon)), pal_name)
+    pal_display <- stats::setNames(pal, sort(unique(pd1$taxon_display)))
+    plots$abundance_time <- ggplot2::ggplot(
+      pd1, ggplot2::aes(x = year, y = abundance, color = taxon_display, group = taxon_display)
+    ) +
+      ggplot2::geom_line(linewidth = 1) + ggplot2::geom_point(size = 2) +
+      ggplot2::scale_color_manual(values = pal_display, name = "Species") +
+      ggplot2::scale_y_continuous(labels = scales::label_comma()) +
+      ggplot2::scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+      ggplot2::labs(title = "Abundance Through Time", x = "Year",
+                    y = agg_label(state$aggregation)) +
+      ggplot2::theme_minimal(base_size = 12) +
+      ggplot2::theme(legend.position = "right")
+  }
+
+  # ── 2. Species Correlation Heatmap ─────────────────────────────────────────
+  pd2 <- tryCatch({
+    raw <- query_aggregated(
+      config,
+      year_min   = state$year_min, year_max = state$year_max,
+      seasons    = state$selected_seasons, species = state$selected_species,
+      agg_method = state$aggregation
+    )
+    if (nrow(raw) == 0) stop("no data")
+    wide <- tidyr::pivot_wider(raw[, c("year", "taxon_display", "abundance")],
+                               names_from = "taxon_display", values_from = "abundance",
+                               values_fn = mean)
+    sp_mat <- wide[, -which(names(wide) == "year"), drop = FALSE]
+    if (nrow(sp_mat) < 3 || ncol(sp_mat) < 2) stop("not enough data")
+    cor(sp_mat, use = "pairwise.complete.obs")
+  }, error = function(e) NULL)
+
+  if (!is.null(pd2)) {
+    corr_long <- reshape2::melt(pd2, varnames = c("Var1", "Var2"), value.name = "Correlation")
+    plots$corr_heatmap <- ggplot2::ggplot(
+      corr_long, ggplot2::aes(x = Var1, y = Var2, fill = Correlation)
+    ) +
+      ggplot2::geom_tile(color = "white", linewidth = 0.4) +
+      ggplot2::scale_fill_gradient2(low = "#2166ac", mid = "#f7f7f7", high = "#b2182b",
+                                    midpoint = 0, limits = c(-1, 1), name = "Pearson r") +
+      ggplot2::coord_fixed() +
+      ggplot2::labs(title = "Species Correlation Heatmap") +
+      ggplot2::theme_minimal(base_size = 11) +
+      ggplot2::theme(axis.title = ggplot2::element_blank(),
+                     axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+                     panel.grid = ggplot2::element_blank())
+  }
+
+  # ── 3. Stability & Variability ──────────────────────────────────────────────
+  pd3 <- tryCatch({
+    raw <- query_aggregated(
+      config,
+      year_min   = state$year_min, year_max = state$year_max,
+      seasons    = state$selected_seasons, species = state$selected_species,
+      agg_method = state$aggregation
+    )
+    if (nrow(raw) == 0) stop("no data")
+    raw |>
+      dplyr::group_by(taxon_display) |>
+      dplyr::summarise(Mean_Abundance = mean(abundance, na.rm = TRUE),
+                       Variance = var(abundance, na.rm = TRUE), .groups = "drop") |>
+      dplyr::filter(is.finite(Mean_Abundance), is.finite(Variance))
+  }, error = function(e) NULL)
+
+  if (!is.null(pd3) && nrow(pd3) > 0) {
+    pal <- make_species_palette(sort(unique(pd3$taxon_display)), pal_name)
+    plots$mean_var <- ggplot2::ggplot(
+      pd3, ggplot2::aes(x = Mean_Abundance, y = Variance, color = taxon_display)
+    ) +
+      ggplot2::geom_point(size = 4, alpha = 0.88) +
+      ggplot2::scale_color_manual(values = pal, name = "Species") +
+      ggplot2::scale_x_continuous(labels = scales::label_comma()) +
+      ggplot2::scale_y_continuous(labels = scales::label_comma()) +
+      ggplot2::labs(title = "Stability & Variability",
+                    x = "Mean Abundance", y = "Variance") +
+      ggplot2::theme_minimal(base_size = 12)
+  }
+
+  # ── 4. Total Abundance by Species ───────────────────────────────────────────
+  pd4 <- tryCatch({
+    raw <- query_aggregated(
+      config,
+      year_min   = state$year_min, year_max = state$year_max,
+      seasons    = state$selected_seasons, species = state$selected_species,
+      agg_method = "sum"
+    )
+    if (nrow(raw) == 0) stop("no data")
+    raw |>
+      dplyr::group_by(taxon, taxon_display) |>
+      dplyr::summarise(total_abundance = sum(abundance, na.rm = TRUE), .groups = "drop") |>
+      dplyr::arrange(dplyr::desc(total_abundance))
+  }, error = function(e) NULL)
+
+  if (!is.null(pd4) && nrow(pd4) > 0) {
+    pd4$taxon_display <- factor(pd4$taxon_display, levels = pd4$taxon_display)
+    pal <- make_species_palette(as.character(pd4$taxon_display), pal_name)
+    plots$abundance_bar <- ggplot2::ggplot(
+      pd4, ggplot2::aes(x = taxon_display, y = total_abundance, fill = taxon_display)
+    ) +
+      ggplot2::geom_col(alpha = 0.88, width = 0.7) +
+      ggplot2::scale_fill_manual(values = pal) +
+      ggplot2::scale_y_continuous(labels = scales::label_comma(),
+                                  expand = ggplot2::expansion(mult = c(0, 0.08))) +
+      ggplot2::labs(title = "Total Abundance by Species", x = "", y = "Total Abundance") +
+      ggplot2::theme_minimal(base_size = 12) +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+                     legend.position = "none")
+  }
+
+  # ── 5. Temporal Trends by Season ────────────────────────────────────────────
+  pd5 <- tryCatch(query_temporal_trends(
+    config,
+    year_min = state$year_min, year_max = state$year_max,
+    seasons  = state$selected_seasons, species = state$selected_species
+  ), error = function(e) NULL)
+
+  if (!is.null(pd5) && nrow(pd5) > 0) {
+    pd5$season_label <- tools::toTitleCase(as.character(pd5$season))
+    season_colors <- c(Spring = "#4DAF4A", Summer = "#FF7F00",
+                       Fall = "#E41A1C", Winter = "#377EB8")
+    plots$temporal_trends <- ggplot2::ggplot(
+      pd5, ggplot2::aes(x = year, y = mean_abundance,
+                        color = season_label, group = season_label)
+    ) +
+      ggplot2::geom_line(linewidth = 1) + ggplot2::geom_point(size = 2) +
+      ggplot2::scale_color_manual(values = season_colors, name = "Season") +
+      ggplot2::scale_y_continuous(labels = scales::label_comma()) +
+      ggplot2::labs(title = "Temporal Trends by Season",
+                    x = "Year", y = "Mean Total Abundance") +
+      ggplot2::theme_minimal(base_size = 12)
+  }
+
+  # ── 6. Time Series by Period (Species view) ─────────────────────────────────
+  pd6 <- tryCatch({
+    raw <- query_aggregated(
+      config,
+      year_min   = state$year_min, year_max = state$year_max,
+      seasons    = state$selected_seasons, species = state$selected_species,
+      agg_method = state$aggregation
+    )
+    if (nrow(raw) == 0) stop("no data")
+    raw |>
+      dplyr::mutate(period = dplyr::case_when(
+        year >= 1951 & year <= 1976 ~ "1951–1976",
+        year >  1976 & year <= 1998 ~ "1977–1998",
+        year >  1998 & year <= 2014 ~ "1999–2014",
+        year >  2014               ~ "2015–present",
+        TRUE ~ NA_character_
+      )) |>
+      dplyr::filter(!is.na(period), period %in% state$selected_periods) |>
+      dplyr::mutate(period = factor(period, levels = period_order))
+  }, error = function(e) NULL)
+
+  if (!is.null(pd6) && nrow(pd6) > 0) {
+    pal         <- make_species_palette(sort(unique(pd6$taxon)), pal_name)
+    pal_display <- stats::setNames(pal, sort(unique(pd6$taxon_display)))
+    plots$time_series <- ggplot2::ggplot(
+      pd6, ggplot2::aes(x = year, y = abundance, color = taxon_display, group = taxon_display)
+    ) +
+      ggplot2::geom_line(linewidth = 0.9) + ggplot2::geom_point(size = 1.8) +
+      ggplot2::facet_wrap(~ period, scales = "free_x") +
+      ggplot2::scale_color_manual(values = pal_display, name = "Species") +
+      ggplot2::scale_y_continuous(labels = scales::label_comma()) +
+      ggplot2::labs(title = "Time Series by Period", x = "Year",
+                    y = agg_label(state$aggregation)) +
+      ggplot2::theme_minimal(base_size = 11) +
+      ggplot2::theme(strip.text = ggplot2::element_text(face = "bold"))
+  }
+
+  plots
 }
