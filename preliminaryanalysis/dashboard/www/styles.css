@@ -344,6 +344,7 @@ body {
 
 .export-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -368,6 +369,27 @@ body {
   color: #7ecbe0;
 }
 .btn-export-pdf:hover { background: rgba(46,134,171,0.3); color: #ffffff; }
+
+/* ── Habitat Reference table ──────────────────────────────────── */
+.habitat-ref-panel {
+  padding: 16px 20px;
+}
+.habitat-ref-panel table.dataTable thead th {
+  background: #1e2d3d;
+  color: #90adc4;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.habitat-ref-panel table.dataTable tbody tr:nth-child(odd)  { background: rgba(255,255,255,0.03); }
+.habitat-ref-panel table.dataTable tbody tr:nth-child(even) { background: rgba(255,255,255,0.07); }
+.habitat-ref-panel table.dataTable tbody tr:hover { background: rgba(46,134,171,0.15); }
+.habitat-ref-panel .dataTables_wrapper .dataTables_filter input,
+.habitat-ref-panel .dataTables_wrapper .dataTables_length select {
+  background: #1a2737; color: #cdd9e5; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px;
+}
+.habitat-ref-panel .dataTables_wrapper .dataTables_info,
+.habitat-ref-panel .dataTables_wrapper .dataTables_paginate { color: #8bafc8; }
+.habitat-ref-panel .dataTables_wrapper .dataTables_paginate .paginate_button { color: #8bafc8 !important; }
+.habitat-ref-panel .dataTables_wrapper .dataTables_paginate .paginate_button.current { background: #2e86ab !important; color: #fff !important; border-radius: 4px; }
 
 /* ── Spinners ─────────────────────────────────────────────────── */
 .shiny-spinner-output-container { min-height: 200px; }

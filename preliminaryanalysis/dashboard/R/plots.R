@@ -1054,7 +1054,7 @@ spatialMapUI <- function(id) {
       shiny::div(
         class = "plot-controls-inline",
         shiny::radioButtons(ns("map_mode"), label = "Color by:",
-                            choices  = c("CalCOFI Line" = "line", "Dominant Species" = "species"),
+                            choices  = c("CalCOFI Line" = "line", "Species" = "species"),
                             selected = "line", inline = TRUE)
       ),
       shiny::div(class = "plot-subtitle", shiny::textOutput(ns("plot_subtitle"), inline = TRUE))

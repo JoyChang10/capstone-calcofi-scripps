@@ -133,6 +133,22 @@ server <- function(input, output, session) {
     else                       shiny::span(class = "badge-ok",      "● Live")
   })
   
+  output$habitat_ref_table <- shiny::renderDataTable({
+    df <- habitat_lookup |>
+      dplyr::transmute(
+        Species  = tools::toTitleCase(gsub("\\.", " ", species)),
+        Habitat  = tools::toTitleCase(habitat),
+        Group    = tools::toTitleCase(GRPname),
+        Region   = tools::toTitleCase(Regionname)
+      ) |>
+      dplyr::arrange(Habitat, Group, Species)
+    df
+  }, options = list(
+    pageLength = 25,
+    order      = list(list(0, "asc")),
+    columnDefs = list(list(className = "dt-center", targets = c(1, 2, 3)))
+  ), rownames = FALSE, class = "display compact")
+
   exportsServer("exports", filtered_data, state, config, habitat_lookup)
   abundanceTimeServer("abundance_time", filtered_data, state, config, habitat_lookup)
   corrHeatmapServer("corr_heatmap",     filtered_data, state, config, habitat_lookup)

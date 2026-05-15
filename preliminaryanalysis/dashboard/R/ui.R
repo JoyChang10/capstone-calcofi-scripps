@@ -86,6 +86,20 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
           shiny::tabPanel("Spatial Distribution",
                           shiny::br(),
                           spatialMapUI("spatial_map")
+          ),
+          shiny::tabPanel("Habitat Reference",
+                          shiny::br(),
+                          shiny::div(
+                            class = "habitat-ref-panel",
+                            shiny::div(
+                              style = "margin-bottom: 12px;",
+                              shiny::h4("Species Habitat Reference",
+                                        style = "margin: 0 0 4px 0; color: #cdd9e5;"),
+                              shiny::p("Reference table of all species and their associated habitat classifications.",
+                                       style = "margin: 0; font-size: 0.85em; color: #8bafc8;")
+                            ),
+                            shiny::dataTableOutput("habitat_ref_table")
+                          )
           )
         )
       )

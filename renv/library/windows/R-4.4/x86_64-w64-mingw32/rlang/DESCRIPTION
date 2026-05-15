@@ -1,5 +1,5 @@
 Package: rlang
-Version: 1.1.5
+Version: 1.2.0
 Title: Functions for Base Types and Core R and 'Tidyverse' Features
 Description: A toolbox for working with base types, core R features
   like the condition system, and core 'Tidyverse' features like tidy
@@ -8,39 +8,40 @@ Authors@R: c(
     person("Lionel", "Henry", ,"lionel@posit.co", c("aut", "cre")),
     person("Hadley", "Wickham", ,"hadley@posit.co", "aut"),
     person(given = "mikefc",
-           email = "mikefc@coolbutuseless.com", 
-           role = "cph", 
+           email = "mikefc@coolbutuseless.com",
+           role = "cph",
            comment = "Hash implementation based on Mike's xxhashlite"),
     person(given = "Yann",
            family = "Collet",
-           role = "cph", 
+           role = "cph",
            comment = "Author of the embedded xxHash library"),
     person(given = "Posit, PBC", role = c("cph", "fnd"))
     )
 License: MIT + file LICENSE
 ByteCompile: true
 Biarch: true
-Depends: R (>= 3.5.0)
+Depends: R (>= 4.0.0)
 Imports: utils
-Suggests: cli (>= 3.1.0), covr, crayon, fs, glue, knitr, magrittr,
-        methods, pillar, rmarkdown, stats, testthat (>= 3.0.0), tibble,
-        usethis, vctrs (>= 0.2.3), withr
+Suggests: cli (>= 3.1.0), covr, crayon, desc, fs, glue, knitr,
+        magrittr, methods, pillar, pkgload, rmarkdown, stats, testthat
+        (>= 3.3.2), tibble, usethis, vctrs (>= 0.2.3), withr
 Enhances: winch
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 URL: https://rlang.r-lib.org, https://github.com/r-lib/rlang
 BugReports: https://github.com/r-lib/rlang/issues
+Config/build/compilation-database: true
 Config/testthat/edition: 3
 Config/Needs/website: dplyr, tidyverse/tidytemplate
 NeedsCompilation: yes
-Packaged: 2025-01-17 08:43:17 UTC; lionel
+Packaged: 2026-04-02 12:23:10 UTC; lionel
 Author: Lionel Henry [aut, cre],
   Hadley Wickham [aut],
   mikefc [cph] (Hash implementation based on Mike's xxhashlite),
   Yann Collet [cph] (Author of the embedded xxHash library),
   Posit, PBC [cph, fnd]
 Maintainer: Lionel Henry <lionel@posit.co>
-Repository: RSPM
-Date/Publication: 2025-01-17 14:30:02 UTC
-Built: R 4.4.0; x86_64-w64-mingw32; 2025-03-05 23:00:19 UTC; windows
+Repository: CRAN
+Date/Publication: 2026-04-06 10:40:02 UTC
+Built: R 4.4.3; x86_64-w64-mingw32; 2026-04-22 00:54:14 UTC; windows
 Archs: x64
