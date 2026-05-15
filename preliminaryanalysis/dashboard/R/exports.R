@@ -65,9 +65,13 @@ exportsServer <- function(id, filtered_data, state, config, habitat_lookup = NUL
     output$dl_pdf <- shiny::downloadHandler(
       filename = function() paste0("calcofi_report_", Sys.Date(), ".pdf"),
       content  = function(file) {
+        # Close any graphics devices left open by previous failed attempts
+        while (grDevices::dev.cur() > 1) tryCatch(grDevices::dev.off(), error = function(e) NULL)
+
         plots <- build_all_ggplots(state, config, habitat_lookup)
 
         grDevices::pdf(file, width = 11, height = 8.5)
+        on.exit(tryCatch(grDevices::dev.off(), error = function(e) NULL), add = TRUE)
 
         # Title page
         graphics::plot.new()
@@ -124,7 +128,6 @@ exportsServer <- function(id, filtered_data, state, config, habitat_lookup = NUL
           })
         }
 
-        grDevices::dev.off()
       }
     )
   })

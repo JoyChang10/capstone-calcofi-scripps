@@ -1,4 +1,18 @@
 # app.R — Entry point
+
+# Auto-install any missing packages
+required_pkgs <- c(
+  "shiny", "duckdb", "DBI", "ggplot2", "plotly", "scales",
+  "RColorBrewer", "shinycssloaders", "glue", "yaml", "tools",
+  "dplyr", "leaflet", "DT", "webshot2", "htmlwidgets", "png",
+  "grid", "readr", "gridExtra"
+)
+missing_pkgs <- required_pkgs[!sapply(required_pkgs, requireNamespace, quietly = TRUE)]
+if (length(missing_pkgs) > 0) {
+  message("Installing missing packages: ", paste(missing_pkgs, collapse = ", "))
+  install.packages(missing_pkgs)
+}
+
 library(shiny)
 library(duckdb)
 library(DBI)
