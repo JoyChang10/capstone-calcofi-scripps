@@ -1,0 +1,10 @@
+name: dashboard
+title:
+username: calcofi-dashboard
+account: calcofi-dashboard
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17374578
+bundleId: 12005227
+url: https://calcofi-dashboard.shinyapps.io/dashboard/
+version: 1
