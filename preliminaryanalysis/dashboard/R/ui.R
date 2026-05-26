@@ -6,7 +6,10 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
   shiny::fluidPage(
     title = config$app$title,
     shiny::tags$head(
-      shiny::tags$link(rel = "stylesheet", href = "styles.css"),
+      shiny::tags$link(rel = "preconnect", href = "https://fonts.googleapis.com"),
+      shiny::tags$link(rel = "stylesheet",
+        href = "https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800&display=swap"),
+      shiny::tags$link(rel = "stylesheet", href = "styles.css?v=6"),
       shiny::tags$meta(name = "viewport", content = "width=device-width, initial-scale=1")
     ),
 
@@ -15,7 +18,6 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
       class = "topbar",
       shiny::div(
         class = "topbar-left",
-        shiny::span(class = "topbar-icon", "🐟"),
         shiny::h1(config$app$title, class = "topbar-title")
       ),
       shiny::div(
@@ -36,28 +38,13 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
         class = "sidebar",
         shiny::div(
           class = "sidebar-inner",
-          shiny::div(
-            class = "sidebar-header",
-            shiny::h4("Filters", class = "sidebar-title"),
-            shiny::div(
-              class = "record-count",
-              shiny::textOutput("record_count", inline = TRUE)
-            )
-          ),
-          shiny::uiOutput("filter_ui"),
-          shiny::hr(),
-          exportsUI("exports"),
-          shiny::p(
-            shiny::icon("circle-info", style = "font-size: 0.75em;"),
-            " Chrome must be installed to include the Spatial Distribution map in PDF exports.",
-            style = "font-size: 0.72em; color: #999; font-style: italic; margin-top: 4px; line-height: 1.4;"
-          )
+          shiny::uiOutput("filter_ui")
         )
       ),
 
       # Content area
       shiny::div(
-        style = "width: 100%; padding-top: 4px;",
+        class = "content",
         shiny::tabsetPanel(
           shiny::tabPanel("Abundance Through Time",
                           shiny::br(),
@@ -94,9 +81,9 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
                             shiny::div(
                               style = "margin-bottom: 12px;",
                               shiny::h4("Species Habitat Reference",
-                                        style = "margin: 0 0 4px 0; color: #cdd9e5;"),
+                                        style = "margin: 0 0 4px 0;"),
                               shiny::p("Reference table of all species and their associated habitat classifications.",
-                                       style = "margin: 0; font-size: 0.85em; color: #8bafc8;")
+                                       style = "margin: 0; font-size: 0.85em; color: var(--text-muted);")
                             ),
                             DT::DTOutput("habitat_ref_table")
                           )
