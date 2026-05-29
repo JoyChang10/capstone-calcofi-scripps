@@ -62,11 +62,7 @@ build_ui <- function(config, data_result, habitat_lookup = NULL) {
                           shiny::br(),
                           abundanceBarUI("abundance_bar")
           ),
-          shiny::tabPanel("Temporal Trends",
-                          shiny::br(),
-                          temporalTrendsUI("temporal_trends")
-          ),
-          shiny::tabPanel("Time Series by Period",
+          shiny::tabPanel("Time Series",
                           shiny::br(),
                           timeSeriesUI("time_series")
           ),

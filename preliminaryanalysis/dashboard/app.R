@@ -175,8 +175,7 @@ server <- function(input, output, session) {
   corrHeatmapServer("corr_heatmap",  filtered_data, state, config, habitat_lookup)
   meanVarServer("mean_var",          filtered_data, state, config, habitat_lookup)
   abundanceBarServer("abundance_bar",filtered_data, state, config, habitat_lookup)
-  temporalTrendsServer("temporal_trends",           state, config)
-  timeSeriesServer("time_series",                   state, config, habitat_lookup)
+  timeSeriesServer("time_series",                   state, config)
   spatialMapServer("spatial_map",                   state, config)
 }
 
