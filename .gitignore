@@ -1,26 +1,32 @@
+# ==============================================================================
+# Project-Specific & Local Data
+# ==============================================================================
 *.duckdb
-
-.Renviron
 *.json
 secrets/
+data/incoming_drive/
+data/tmp_edit_test.csv
 
-# macOS
+# Secrets & Environment Variables
+.env
+.envrc
+.Renviron
+.Renviron.R
+
+# Operating System
 .DS_Store
 
+# ==============================================================================
 # R / RStudio
+# ==============================================================================
 .Rhistory
 .RData
 .Rproj.user/
 .Rproj.user
 
-# Secrets / env vars
-.Renviron
-.Renviron.R
-
-# Local pipeline artifacts
-data/incoming_drive/
-data/tmp_edit_test.csv
-
+# ==============================================================================
+# Python
+# ==============================================================================
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -76,41 +82,40 @@ cover/
 *.mo
 *.pot
 
-# Django stuff:
+# Frameworks: Django & Flask
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-
-# Flask stuff:
 instance/
 .webassets-cache
 
-# Scrapy stuff:
+# Web Scraping: Scrapy
 .scrapy
 
-# Sphinx documentation
+# Documentation: Sphinx & MkDocs
 docs/_build/
+/site
 
-# PyBuilder
+# Build tools
 .pybuilder/
 target/
 
-# Jupyter Notebook.ipynb_checkpoints
-
-# IPython
+# Interactive environments & Notebooks
+.ipynb_checkpoints
 profile_default/
 ipython_config.py
 
-# UV / pdm / pixi
+# Task queues & Math tools
+celerybeat-schedule
+celerybeat.pid
+*.sage.py
+
+# Package managers & Virtual environments
 .pdm-python
 .pdm-build/
 .pixi
 __pypackages__/
-
-# Environments
-.env
-.envrc
 .venv
 env/
 venv/
@@ -118,38 +123,25 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder / Rope
+# IDEs & Editors
 .spyderproject
 .spyproject
 .ropeproject
+.cursorignore
+.cursorindexingignore
 
-# mkdocs documentation
-/site
-
-# mypy / pyre / pytype
+# Static Type Checkers & Linters
 .mypy_cache/
 .dmypy.json
 dmypy.json
 .pyre/
 .pytype/
-
-# Cython debug symbols
+.ruff_cache/
 cython_debug/
 
-# Abstra
+# Tool-specific configurations
 .abstra/
-
-# Ruff
-.ruff_cache/
-
-# PyPI config
 .pypirc
-
-# Cursor
-.cursorignore
-.cursorindexingignore
-
-# Marimo
 marimo/_static/
 marimo/_lsp/
 __marimo__/
